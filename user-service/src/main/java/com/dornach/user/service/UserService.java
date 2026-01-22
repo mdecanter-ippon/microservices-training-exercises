@@ -2,14 +2,23 @@ package com.dornach.user.service;
 
 import com.dornach.user.domain.User;
 import com.dornach.user.dto.CreateUserRequest;
+import com.dornach.user.dto.UpdateUserRequest;
+import com.dornach.user.exception.EmailAlreadyExistsException;
+import com.dornach.user.exception.UserNotFoundException;
 import com.dornach.user.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
 
@@ -17,46 +26,88 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    public User createUser(CreateUserRequest request) {
+        log.info("Creating user with email: {}", request.email());
+
+        if (userRepository.existsByEmail(request.email())) {
+            throw new EmailAlreadyExistsException(request.email());
+        }
+
+        User user = new User(
+                request.email(),
+                request.firstName(),
+                request.lastName(),
+                request.role()
+        );
+
+        User saved = userRepository.save(user);
+        log.info("User created with id: {}", saved.getId());
+
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserById(UUID id) {
+        log.debug("Fetching user by id: {}", id);
+
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserByEmail(String email) {
+        log.debug("Fetching user by email: {}", email);
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(null));
+    }
+
+    @Transactional(readOnly = true)
     public List<User> getAllUsers() {
+        log.debug("Fetching all users");
+
         return userRepository.findAll();
     }
 
-    public User getUserById(UUID id) {
-        // TODO (Step 1 - Exercise 3):
-        // Return the user if found, otherwise throw UserNotFoundException
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found: " + id));
-    }
+    public User updateUser(UUID id, UpdateUserRequest request) {
+        log.info("Updating user: {}", id);
 
-    public User createUser(CreateUserRequest request) {
-        // TODO (Step 1 - Exercise 3):
-        // 1. Check if email already exists (throw exception if so)
-        // 2. Create a new User entity from the request
-        // 3. Save and return the user
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
 
-        User user = new User(
-                request.getEmail(),
-                request.getFirstName(),
-                request.getLastName(),
-                request.getRole()
-        );
+        if (request.email() != null && !request.email().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.email())) {
+                throw new EmailAlreadyExistsException(request.email());
+            }
+            user.setEmail(request.email());
+        }
 
-        return userRepository.save(user);
-    }
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName());
+        }
 
-    public User updateUser(UUID id, CreateUserRequest request) {
-        User user = getUserById(id);
-        user.setEmail(request.getEmail());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setRole(request.getRole());
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName());
+        }
+
+        if (request.role() != null) {
+            user.setRole(request.role());
+        }
+
+        if (request.status() != null) {
+            user.setStatus(request.status());
+        }
+
         return userRepository.save(user);
     }
 
     public void deleteUser(UUID id) {
+        log.info("Deleting user: {}", id);
+
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found: " + id);
+            throw new UserNotFoundException(id);
         }
+
         userRepository.deleteById(id);
     }
 }

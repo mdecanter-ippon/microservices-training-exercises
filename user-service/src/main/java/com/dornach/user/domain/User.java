@@ -4,41 +4,39 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * User entity representing a Dornach employee.
- *
- * TODO (Step 1 - Exercise 1):
- * 1. Add JPA annotations (@Entity, @Table, @Id, etc.)
- * 2. Add @GeneratedValue for UUID generation
- * 3. Add @Enumerated for the role field
- * 4. Add @CreationTimestamp and @UpdateTimestamp for timestamps
- */
+@Entity
+@Table(name = "users")
 public class User {
 
-    // TODO: Add @Id and @GeneratedValue annotations
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // TODO: Add @Column with unique constraint
+    @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
     private String firstName;
 
+    @Column(nullable = false)
     private String lastName;
 
-    // TODO: Add @Enumerated annotation
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserRole role;
 
-    // TODO: Add @Enumerated annotation
-    private UserStatus status = UserStatus.ACTIVE;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status;
 
-    // TODO: Add @CreationTimestamp annotation
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    // TODO: Add @UpdateTimestamp annotation
+    @Column(nullable = false)
     private Instant updatedAt;
 
-    // Default constructor for JPA
-    protected User() {}
+    protected User() {
+    }
 
     public User(String email, String firstName, String lastName, UserRole role) {
         this.email = email;
@@ -46,27 +44,64 @@ public class User {
         this.lastName = lastName;
         this.role = role;
         this.status = UserStatus.ACTIVE;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public UUID getId() {
+        return id;
+    }
 
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getEmail() {
+        return email;
+    }
 
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public UserRole getRole() { return role; }
-    public void setRole(UserRole role) { this.role = role; }
+    public String getFirstName() {
+        return firstName;
+    }
 
-    public UserStatus getStatus() { return status; }
-    public void setStatus(UserStatus status) { this.status = status; }
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

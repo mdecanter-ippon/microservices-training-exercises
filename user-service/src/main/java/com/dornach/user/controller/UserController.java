@@ -1,29 +1,23 @@
 package com.dornach.user.controller;
 
 import com.dornach.user.dto.CreateUserRequest;
+import com.dornach.user.dto.UpdateUserRequest;
 import com.dornach.user.dto.UserResponse;
 import com.dornach.user.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
-/**
- * REST Controller for User management.
- *
- * TODO (Step 1 - Exercise 3): Implement the following endpoints:
- *
- * | Method | Path         | Description      | Response Code |
- * |--------|--------------|------------------|---------------|
- * | POST   | /users       | Create a user    | 201 Created   |
- * | GET    | /users       | List all users   | 200 OK        |
- * | GET    | /users/{id}  | Get user by ID   | 200 OK / 404  |
- * | PUT    | /users/{id}  | Update user      | 200 OK / 404  |
- * | DELETE | /users/{id}  | Delete user      | 204 No Content|
- */
 @RestController
 @RequestMapping("/users")
+@Tag(name = "Users", description = "User management endpoints")
 public class UserController {
 
     private final UserService userService;
@@ -32,40 +26,53 @@ public class UserController {
         this.userService = userService;
     }
 
-    @GetMapping
-    public List<UserResponse> getAllUsers() {
-        return userService.getAllUsers().stream()
-                .map(UserResponse::from)
-                .toList();
+    @PostMapping
+    @Operation(summary = "Create a new user")
+    @ApiResponse(responseCode = "201", description = "User created successfully")
+    @ApiResponse(responseCode = "400", description = "Validation error")
+    @ApiResponse(responseCode = "409", description = "Email already exists")
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+        var user = userService.createUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get user by ID")
+    @ApiResponse(responseCode = "200", description = "User found")
+    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
-        // TODO (Step 1): Return 404 if user not found
         var user = userService.getUserById(id);
         return ResponseEntity.ok(UserResponse.from(user));
     }
 
-    @PostMapping
-    public ResponseEntity<UserResponse> createUser(@RequestBody CreateUserRequest request) {
-        // TODO (Step 1):
-        // 1. Add @Valid annotation to enable validation
-        // 2. Return 201 Created with Location header
-        // Hint: Use ServletUriComponentsBuilder for the Location header
-
-        var user = userService.createUser(request);
-        return ResponseEntity.ok(UserResponse.from(user));
+    @GetMapping
+    @Operation(summary = "Get all users")
+    @ApiResponse(responseCode = "200", description = "List of users")
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        var users = userService.getAllUsers()
+                .stream()
+                .map(UserResponse::from)
+                .toList();
+        return ResponseEntity.ok(users);
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update an existing user")
+    @ApiResponse(responseCode = "200", description = "User updated successfully")
+    @ApiResponse(responseCode = "400", description = "Validation error")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "409", description = "Email already exists")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID id,
-            @RequestBody CreateUserRequest request) {
+            @Valid @RequestBody UpdateUserRequest request) {
         var user = userService.updateUser(id, request);
         return ResponseEntity.ok(UserResponse.from(user));
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a user")
+    @ApiResponse(responseCode = "204", description = "User deleted successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

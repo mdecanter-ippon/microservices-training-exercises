@@ -1,28 +1,25 @@
 package com.dornach.user.dto;
 
 import com.dornach.user.domain.UserRole;
+import com.dornach.user.domain.UserStatus;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request DTO for user creation.
- * Using Java Record for immutability and automatic equals/hashCode/toString.
+ * Request DTO for user updates.
+ * All fields are optional for partial updates.
  */
-public record CreateUserRequest(
-        @NotBlank(message = "Email is required")
+public record UpdateUserRequest(
         @Email(message = "Email must be valid")
         String email,
 
-        @NotBlank(message = "First name is required")
         @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
         String firstName,
 
-        @NotBlank(message = "Last name is required")
         @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
         String lastName,
 
-        @NotNull(message = "Role is required")
-        UserRole role
+        UserRole role,
+
+        UserStatus status
 ) {}
