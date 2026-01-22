@@ -1,0 +1,27 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{shipment_service_url}}/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Service is UP", function() {
+    expect(res.getBody().status).to.equal("UP");
+  });
+}
+
+docs {
+  🔗 Direct access to shipment-service (port 8082)
+
+  Tests the health endpoint without going through the API Gateway.
+}

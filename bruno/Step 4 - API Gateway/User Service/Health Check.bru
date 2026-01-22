@@ -1,0 +1,33 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{gateway}}/users/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  const isGatewayEnv = bru.getEnvVar("env_name") === "gateway";
+
+  test("Status is 200 (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      expect(res.getStatus()).to.equal(200);
+    }
+  });
+
+  test("Service is UP (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      expect(res.getBody().status).to.equal("UP");
+    }
+  });
+}
+
+docs {
+  ✅ Public endpoint - No JWT required
+
+  Tests that the API Gateway correctly routes to user-service health endpoint.
+}

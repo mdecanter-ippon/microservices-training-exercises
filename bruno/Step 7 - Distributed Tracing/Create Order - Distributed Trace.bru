@@ -1,0 +1,84 @@
+meta {
+  name: Create Order - Distributed Trace
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{alice_token}}
+}
+
+body:json {
+  {
+    "userId": "{{alice_user_id}}",
+    "productName": "Laptop",
+    "quantity": 2,
+    "totalPrice": 2999.99,
+    "shippingAddress": "123 Main St, Springfield, 12345, USA"
+  }
+}
+
+script:post-response {
+  // Store order ID for the confirm step
+  if (res.getStatus() === 201) {
+    const body = res.getBody();
+    bru.setVar("order_id", body.id);
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Order has ID and status PENDING", function() {
+    const body = res.getBody();
+    expect(body.id).to.be.a('string');
+    expect(body.status).to.equal('PENDING');
+  });
+
+  test("Order ID is stored for confirm step", function() {
+    expect(bru.getVar("order_id")).to.be.a('string');
+  });
+}
+
+docs {
+  # Create Order - Distributed Trace (Step 1: PENDING)
+
+  This is **Step 1** of the two-step order flow demonstrating distributed tracing.
+
+  **Two-Step Flow:**
+  1. **Create Order (this request)** → Order in PENDING status, validates user
+  2. **Confirm Order (next request)** → Ships order via shipment-service
+
+  **Request Flow (this step):**
+  ```
+  Client
+    |
+    | POST /orders (with Alice's token)
+    v
+  order-service
+    |
+    └─→ GET /users/alice (forwards user's JWT)
+        └── user-service -> Validates user exists
+  ```
+
+  **What happens:**
+  1. Order created with PENDING status
+  2. User validated via user-service (trace: order → user)
+  3. Order ID stored for the confirm step
+
+  **Next:** Run "Confirm Order - Complete Trace" to see the full distributed trace with shipment-service.
+
+  **View in Zipkin:**
+  1. Open http://localhost:9411
+  2. Find the trace for this request
+  3. You'll see: order-service → user-service span
+  4. After running "Confirm Order", you'll see a second trace with: order-service → shipment-service
+}

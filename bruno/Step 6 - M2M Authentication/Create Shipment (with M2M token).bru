@@ -1,0 +1,86 @@
+meta {
+  name: Create Shipment (with M2M token)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{shipment_service_url}}/shipments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{m2m_token}}
+}
+
+body:json {
+  {
+    "orderId": "{{$randomUUID}}",
+    "recipientName": "John Doe",
+    "recipientAddress": "123 Main St, Springfield, 12345, USA"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Shipment has tracking number", function() {
+    const body = res.getBody();
+    expect(body.trackingNumber).to.be.a('string');
+    expect(body.trackingNumber).to.match(/^SHIP-/);
+  });
+
+  test("Shipment status is PENDING", function() {
+    expect(res.getBody().status).to.equal("PENDING");
+  });
+
+  test("Response contains shipment ID", function() {
+    expect(res.getBody().id).to.be.a('string');
+  });
+}
+
+docs {
+  # Create Shipment with M2M Token ✅
+
+  This request demonstrates **successful M2M authentication** using the service account token.
+
+  **Authorization:**
+  - Uses `{{m2m_token}}` obtained from "Get M2M Token"
+  - Token contains `realm_access.roles = ["service-caller"]`
+  - Shipment controller has `@PreAuthorize("hasRole('service-caller') or hasRole('admin')")`
+
+  **Expected Result:**
+  ✅ **HTTP 201 Created** - The service account has the required `service-caller` role
+
+  **How it works:**
+  1. RestClient sends: `Authorization: Bearer {{m2m_token}}`
+  2. `shipment-service` validates JWT signature with Keycloak public keys
+  3. JwtAuthenticationConverter extracts `realm_access.roles`
+  4. Spring Security converts roles to authorities: `ROLE_service-caller`
+  5. `@PreAuthorize` checks if current user has `ROLE_service-caller` or `ROLE_admin`
+  6. ✅ Authorization succeeds → Shipment is created
+
+  **Security Flow:**
+  ```
+  order-service (M2M token)
+        |
+        | POST /shipments
+        | Authorization: Bearer eyJhbGc...
+        ↓
+  shipment-service
+        |
+        | 1. Validate JWT signature ✅
+        | 2. Extract realm_access.roles = ["service-caller"]
+        | 3. Convert to ROLE_service-caller
+        | 4. Check @PreAuthorize("hasRole('service-caller')") ✅
+        ↓
+  201 Created
+  ```
+
+  **Compare with:**
+  - "Create Shipment (with Alice token)" → ❌ 403 Forbidden (missing role)
+  - This demonstrates Role-Based Access Control (RBAC) for M2M
+}

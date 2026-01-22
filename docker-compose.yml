@@ -1,0 +1,114 @@
+services:
+  # ==================== Infrastructure ====================
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command: start-dev
+    networks:
+      - dornach-network
+
+  localstack:
+    image: localstack/localstack-pro
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=apigateway,apigatewayv2,logs,sqs
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+    networks:
+      - dornach-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=dornach
+      - POSTGRES_PASSWORD=dornach
+      - POSTGRES_DB=dornach
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - dornach-network
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - dornach-network
+
+  # ==================== Microservices ====================
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dornach
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - dornach-network
+
+  shipment-service:
+    build: ./shipment-service
+    container_name: shipment-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dornach
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - dornach-network
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SHIPMENT_SERVICE_URL=http://shipment-service:8082
+      - USER_SERVICE_URL=http://user-service:8081
+      - ORDER_SERVICE_CLIENT_SECRET=${ORDER_SERVICE_CLIENT_SECRET:-order-service-secret-change-in-production}
+    depends_on:
+      - user-service
+      - shipment-service
+      - keycloak
+      - localstack
+    networks:
+      - dornach-network
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - keycloak
+      - localstack
+      - zipkin
+    networks:
+      - dornach-network
+
+networks:
+  dornach-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

@@ -1,0 +1,43 @@
+meta {
+  name: OpenAPI Spec
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{gateway}}/users/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  const isGatewayEnv = bru.getEnvVar("env_name") === "gateway";
+
+  test("Status is 200 (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      expect(res.getStatus()).to.equal(200);
+    }
+  });
+
+  test("OpenAPI spec is valid (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      const body = res.getBody();
+      expect(body.openapi).to.equal("3.1.0");
+      expect(body.info.title).to.equal("Dornach User Service API");
+    }
+  });
+
+  test("Has /users paths (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      const body = res.getBody();
+      expect(body.paths).to.have.property("/users");
+      expect(body.paths).to.have.property("/users/{id}");
+    }
+  });
+}
+
+docs {
+  ✅ Public endpoint - No JWT required
+
+  Retrieves the OpenAPI 3.1 specification for the User Service via the gateway.
+}

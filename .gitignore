@@ -1,0 +1,47 @@
+# Build output
+target/
+build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+*.env
+
+# Quick start guides
+QUICK_START_*.md
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Test output
+test-output/
+
+# Generated OpenAPI specs (generated from running services)
+openapi/*.yaml
+openapi/*.json
+
+# Generated client SDKs
+generated-clients/
+
+# Terraform
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/

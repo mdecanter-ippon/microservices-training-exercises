@@ -1,0 +1,75 @@
+meta {
+  name: Get User by ID - Simple Trace
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{user_service_url}}/users/{{alice_user_id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{alice_token}}
+}
+
+tests {
+  test("Status is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Returns Alice user", function() {
+    const body = res.getBody();
+    expect(body.firstName).to.equal('Alice');
+    expect(body.lastName).to.equal('Martin');
+    expect(body.email).to.equal('alice@dornach.com');
+  });
+}
+
+docs {
+  # Get User by ID - Simple Trace 📍
+
+  This request demonstrates **single-service tracing** with Micrometer + OpenTelemetry.
+
+  **What happens:**
+  1. Request hits `user-service` at `/users/alice`
+  2. Micrometer automatically creates a trace with:
+     - **Trace ID**: Unique identifier for the entire request flow
+     - **Span ID**: Identifier for this specific operation
+  3. The trace is exported to Zipkin for visualization
+  4. Logs include `[user-service,{traceId},{spanId}]` for correlation
+
+  **How to view the trace in Zipkin:**
+  1. Run this request to generate a trace
+  2. Open Zipkin UI: http://localhost:9411
+  3. Click "Run Query" to see recent traces
+  4. Find the trace with `serviceName=user-service` and `http.method=GET`
+  5. Click on the trace to see:
+     - Total duration
+     - Span details (HTTP method, URL, status code)
+     - Tags (http.method, http.url, http.status_code)
+
+  **Expected Trace Structure:**
+  ```
+  user-service: GET /users/alice
+    ├─ HTTP GET (duration: ~50ms)
+    ├─ Tags: http.method=GET, http.url=/users/alice, http.status_code=200
+    └─ Logs: [user-service,abc123,def456]
+  ```
+
+  **Automatic Instrumentation:**
+  - Spring Boot + Micrometer automatically instruments:
+    - HTTP requests/responses
+    - Database queries (via JPA/Hibernate)
+    - RestClient calls
+  - No manual code changes required!
+
+  **Trace Sampling:**
+  - Current config: `management.tracing.sampling.probability: 1.0`
+  - Means: 100% of requests are traced (good for demo, not for production)
+  - Production: Use 0.1 (10%) or 0.01 (1%) to reduce overhead
+
+  **Compare with:**
+  - "Create Order - Distributed Trace" → Shows trace across 3 services
+}
