@@ -1,0 +1,27 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{gateway}}/shipments/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Service is UP", function() {
+    expect(res.getBody().status).to.equal("UP");
+  });
+}
+
+docs {
+  ✅ Public endpoint - No JWT required
+
+  Tests that the API Gateway correctly routes to shipment-service health endpoint.
+}

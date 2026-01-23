@@ -25,7 +25,7 @@ This Bruno collection contains API tests for the Dornach microservices platform.
 3. **Update the API ID**:
    - After running `setup-gateway.sh`, copy the API ID displayed
    - Open Bruno and edit the environment variable:
-     - Go to **Environments** > **Local Direct**
+     - Go to **Environments** → **Local Direct**
      - Update `api_id` with your actual API ID (e.g., `eeb818fb`)
 
 ## Structure
@@ -36,67 +36,35 @@ bruno/
 ├── README.md                            # This file
 ├── environments/
 │   └── Local Direct.bru                 # Environment variables
-├── Authentication/                      # Get JWT tokens
-│   ├── Get Token - Alice (user).bru     # Get user token
-│   └── Get Token - Bob (admin).bru      # Get admin token
-├── Authenticated Requests/              # Use JWT tokens
-│   ├── List Users (with Alice token).bru      # GET with user role
-│   ├── Create User (with Bob token).bru       # POST with admin role
-│   ├── List Shipments (with Alice token).bru  # GET shipments
-│   └── List Orders (with Bob token).bru       # GET orders
 ├── Gateway Tests/                       # Via API Gateway
 │   ├── User Service/
-│   │   ├── Health Check.bru             # Public (200)
-│   │   ├── OpenAPI Spec.bru             # Public (200)
-│   │   └── List Users (requires JWT).bru # Protected (401)
+│   │   ├── Health Check.bru             Public (200)
+│   │   ├── OpenAPI Spec.bru             Public (200)
+│   │   └── List Users (requires JWT).bru Protected (401)
 │   ├── Shipment Service/
-│   │   ├── Health Check.bru             # Public (200)
-│   │   ├── OpenAPI Spec.bru             # Public (200)
-│   │   └── List Shipments (requires JWT).bru # Protected (401)
+│   │   ├── Health Check.bru             Public (200)
+│   │   ├── OpenAPI Spec.bru             Public (200)
+│   │   └── List Shipments (requires JWT).bru Protected (401)
 │   └── Order Service/
-│       ├── Health Check.bru             # Public (200)
-│       ├── OpenAPI Spec.bru             # Public (200)
-│       └── List Orders (requires JWT).bru # Protected (401)
+│       ├── Health Check.bru             Public (200)
+│       ├── OpenAPI Spec.bru             Public (200)
+│       └── List Orders (requires JWT).bru Protected (401)
 └── Direct Access/                       # Direct to services
     ├── User Service/
-    │   ├── Health Check.bru             # Public (200)
-    │   ├── OpenAPI Spec.bru             # Public (200)
-    │   └── List Users (requires JWT).bru # Protected (401)
+    │   ├── Health Check.bru             Public (200)
+    │   ├── OpenAPI Spec.bru             Public (200)
+    │   └── List Users (requires JWT).bru Protected (401)
     ├── Shipment Service/
-    │   ├── Health Check.bru             # Public (200)
-    │   ├── OpenAPI Spec.bru             # Public (200)
-    │   └── List Shipments (requires JWT).bru # Protected (401)
+    │   ├── Health Check.bru             Public (200)
+    │   ├── OpenAPI Spec.bru             Public (200)
+    │   └── List Shipments (requires JWT).bru Protected (401)
     └── Order Service/
-        ├── Health Check.bru             # Public (200)
-        ├── OpenAPI Spec.bru             # Public (200)
-        └── List Orders (requires JWT).bru # Protected (401)
+        ├── Health Check.bru             Public (200)
+        ├── OpenAPI Spec.bru             Public (200)
+        └── List Orders (requires JWT).bru Protected (401)
 ```
 
-## Testing Approaches
-
-### Authentication (Step 5)
-Get JWT tokens from Keycloak to test protected endpoints.
-
-**How to use:**
-1. Run "Get Token - Alice (user)" or "Get Token - Bob (admin)"
-2. Token is automatically saved to environment (`alice_token` or `bob_token`)
-3. Use authenticated requests to test with valid JWTs
-
-**Available users:**
-- **Alice** (alice123) - Role: user
-- **Bob** (bob123) - Roles: user, admin
-
-### Authenticated Requests
-Test API endpoints with JWT authentication.
-
-**Prerequisites:**
-- Keycloak must be running and configured
-- Obtain tokens from the Authentication folder first
-
-**Examples:**
-- List/Create Users with Alice or Bob token
-- List Shipments with authentication
-- List Orders with authentication
+## Two Testing Approaches
 
 ### Gateway Tests
 Tests requests going through the **API Gateway** (LocalStack).
@@ -110,11 +78,10 @@ Tests requests going **directly to services** (bypassing gateway).
 - Useful for debugging service-level issues
 - Faster response times (no gateway overhead)
 
-**Use all approaches to:**
-- Test authentication flows (Step 5)
-- Verify gateway routing (Step 4)
-- Debug service-level issues (Direct Access)
-- Compare authenticated vs unauthenticated requests
+**Use both to compare:**
+- Both should return identical responses
+- Gateway adds ~5-10ms latency
+- Gateway provides centralized security, rate limiting, and observability
 
 ## How to Use
 
@@ -169,9 +136,6 @@ After Step 5 (Keycloak), you'll be able to:
 | `user_service_url` | Direct user service URL | `http://localhost:8081` |
 | `shipment_service_url` | Direct shipment service URL | `http://localhost:8082` |
 | `order_service_url` | Direct order service URL | `http://localhost:8083` |
-| `keycloak_url` | Keycloak server URL | `http://localhost:8080` |
-| `alice_token` | JWT token for Alice (auto-filled) | Obtained from Authentication requests |
-| `bob_token` | JWT token for Bob (auto-filled) | Obtained from Authentication requests |
 
 ## Troubleshooting
 

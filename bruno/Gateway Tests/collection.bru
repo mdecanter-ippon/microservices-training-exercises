@@ -1,0 +1,19 @@
+name: Gateway Tests
+type: folder
+
+docs {
+  # Gateway Tests 🌐
+
+  These requests test the API Gateway routing functionality.
+  All requests go through LocalStack API Gateway before reaching the services.
+
+  **Purpose:**
+  - Verify API Gateway routes correctly to each service
+  - Test that path-based routing works (/users, /shipments, /orders)
+  - Validate that security is enforced at the service level
+
+  **Expected Results:**
+  - ✅ Health checks: HTTP 200
+  - ✅ OpenAPI specs: HTTP 200
+  - ❌ Protected endpoints: HTTP 401 (until Step 5 with Keycloak)
+}

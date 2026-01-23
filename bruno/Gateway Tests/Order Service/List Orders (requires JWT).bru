@@ -11,18 +11,12 @@ get {
 }
 
 tests {
-  const isGatewayEnv = bru.getEnvVar("env_name") === "gateway";
-
-  test("Returns 401 Unauthorized (skipped if not gateway)", function() {
-    if (isGatewayEnv) {
-      expect(res.getStatus()).to.equal(401);
-    }
+  test("Returns 401 Unauthorized (expected)", function() {
+    expect(res.getStatus()).to.equal(401);
   });
 
-  test("Has WWW-Authenticate header (skipped if not gateway)", function() {
-    if (isGatewayEnv) {
-      expect(res.getHeaders()["www-authenticate"]).to.equal("Bearer");
-    }
+  test("Has WWW-Authenticate header", function() {
+    expect(res.getHeaders()["www-authenticate"]).to.equal("Bearer");
   });
 }
 

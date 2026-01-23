@@ -1,0 +1,25 @@
+name: Direct Access
+type: folder
+
+docs {
+  # Direct Access 🔗
+
+  These requests access services directly, bypassing the API Gateway.
+  Useful for debugging and comparing with gateway-routed requests.
+
+  **Purpose:**
+  - Test services without gateway overhead
+  - Debug service-level issues
+  - Compare response times with Gateway Tests
+  - Verify services work independently
+
+  **URL Patterns:**
+  - User Service: `http://localhost:8081`
+  - Shipment Service: `http://localhost:8082`
+  - Order Service: `http://localhost:8083`
+
+  **Expected Results:**
+  - Should match Gateway Tests results exactly
+  - Slightly faster response times (no gateway hop)
+  - Same security behavior (401 for protected endpoints)
+}
