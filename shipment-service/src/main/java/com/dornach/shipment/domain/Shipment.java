@@ -1,9 +1,6 @@
 package com.dornach.shipment.domain;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.Instant;
 import java.util.UUID;
 
@@ -15,11 +12,11 @@ public class Shipment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private UUID orderId;
-
     @Column(nullable = false, unique = true)
     private String trackingNumber;
+
+    @Column(nullable = false)
+    private UUID orderId;
 
     @Column(nullable = false)
     private String recipientName;
@@ -29,15 +26,20 @@ public class Shipment {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ShipmentStatus status = ShipmentStatus.PENDING;
+    private ShipmentStatus status;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
+    @Column(nullable = false)
     private Instant updatedAt;
 
-    protected Shipment() {}
+    private Instant shippedAt;
+
+    private Instant deliveredAt;
+
+    protected Shipment() {
+    }
 
     public Shipment(UUID orderId, String recipientName, String recipientAddress) {
         this.orderId = orderId;
@@ -45,20 +47,78 @@ public class Shipment {
         this.recipientAddress = recipientAddress;
         this.trackingNumber = generateTrackingNumber();
         this.status = ShipmentStatus.PENDING;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
     private String generateTrackingNumber() {
-        return "TRK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "SHIP-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public UUID getOrderId() { return orderId; }
-    public String getTrackingNumber() { return trackingNumber; }
-    public String getRecipientName() { return recipientName; }
-    public String getRecipientAddress() { return recipientAddress; }
-    public ShipmentStatus getStatus() { return status; }
-    public void setStatus(ShipmentStatus status) { this.status = status; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+
+    public void markAsShipped() {
+        this.status = ShipmentStatus.SHIPPED;
+        this.shippedAt = Instant.now();
+    }
+
+    public void markAsDelivered() {
+        this.status = ShipmentStatus.DELIVERED;
+        this.deliveredAt = Instant.now();
+    }
+
+    public void markAsCancelled() {
+        this.status = ShipmentStatus.CANCELLED;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public UUID getOrderId() {
+        return orderId;
+    }
+
+    public String getRecipientName() {
+        return recipientName;
+    }
+
+    public void setRecipientName(String recipientName) {
+        this.recipientName = recipientName;
+    }
+
+    public String getRecipientAddress() {
+        return recipientAddress;
+    }
+
+    public void setRecipientAddress(String recipientAddress) {
+        this.recipientAddress = recipientAddress;
+    }
+
+    public ShipmentStatus getStatus() {
+        return status;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Instant getShippedAt() {
+        return shippedAt;
+    }
+
+    public Instant getDeliveredAt() {
+        return deliveredAt;
+    }
 }

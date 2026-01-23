@@ -8,47 +8,21 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
 /**
- * Configuration for RestClient beans.
- *
- * TODO (Step 2 - Exercise 1): Configure RestClient for calling other services
+ * Configuration for the RestClient used to communicate with other services.
+ * This demonstrates the new Spring 6 RestClient which replaces RestTemplate.
  */
 @Configuration
 public class RestClientConfig {
 
-    @Value("${user.service.url:http://localhost:8081}")
-    private String userServiceUrl;
-
-    @Value("${shipment.service.url:http://localhost:8082}")
+    @Value("${shipment.service.url}")
     private String shipmentServiceUrl;
 
-    /**
-     * RestClient for calling user-service.
-     *
-     * TODO (Step 2 - Exercise 1):
-     * 1. Use the builder (not RestClient.builder() - important for tracing!)
-     * 2. Set the base URL from userServiceUrl
-     * 3. Add default Content-Type header (application/json)
-     * 4. Return the built RestClient
-     */
     @Bean
-    public RestClient userRestClient(RestClient.Builder builder) {
-        // TODO: Implement
-        // Hint:
-        // return builder
-        //     .baseUrl(userServiceUrl)
-        //     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        //     .build();
-
-        return builder.baseUrl(userServiceUrl).build();
-    }
-
-    /**
-     * RestClient for calling shipment-service.
-     *
-     * TODO (Step 2): Implement similarly to userRestClient
-     */
-    @Bean
-    public RestClient shipmentRestClient(RestClient.Builder builder) {
-        return builder.baseUrl(shipmentServiceUrl).build();
+    public RestClient shipmentRestClient() {
+        return RestClient.builder()
+                .baseUrl(shipmentServiceUrl)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 }

@@ -1,9 +1,6 @@
 package com.dornach.order.domain;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -23,7 +20,7 @@ public class Order {
     private String productName;
 
     @Column(nullable = false)
-    private int quantity;
+    private Integer quantity;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
@@ -33,39 +30,100 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OrderStatus status = OrderStatus.PENDING;
+    private OrderStatus status;
+
+    private UUID shipmentId;
 
     private String trackingNumber;
 
-    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
+    @Column(nullable = false)
     private Instant updatedAt;
 
-    protected Order() {}
+    protected Order() {
+    }
 
-    public Order(UUID userId, String productName, int quantity,
-                 BigDecimal totalPrice, String shippingAddress) {
+    public Order(UUID userId, String productName, Integer quantity, BigDecimal totalPrice, String shippingAddress) {
         this.userId = userId;
         this.productName = productName;
         this.quantity = quantity;
         this.totalPrice = totalPrice;
         this.shippingAddress = shippingAddress;
         this.status = OrderStatus.PENDING;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public UUID getUserId() { return userId; }
-    public String getProductName() { return productName; }
-    public int getQuantity() { return quantity; }
-    public BigDecimal getTotalPrice() { return totalPrice; }
-    public String getShippingAddress() { return shippingAddress; }
-    public OrderStatus getStatus() { return status; }
-    public void setStatus(OrderStatus status) { this.status = status; }
-    public String getTrackingNumber() { return trackingNumber; }
-    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+
+    public void markAsConfirmed() {
+        this.status = OrderStatus.CONFIRMED;
+    }
+
+    public void markAsShipped(UUID shipmentId, String trackingNumber) {
+        this.status = OrderStatus.SHIPPED;
+        this.shipmentId = shipmentId;
+        this.trackingNumber = trackingNumber;
+    }
+
+    public void markAsDelivered() {
+        this.status = OrderStatus.DELIVERED;
+    }
+
+    public void markAsCancelled() {
+        this.status = OrderStatus.CANCELLED;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
+    }
+
+    public String getShippingAddress() {
+        return shippingAddress;
+    }
+
+    public void setShippingAddress(String shippingAddress) {
+        this.shippingAddress = shippingAddress;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public UUID getShipmentId() {
+        return shipmentId;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }
