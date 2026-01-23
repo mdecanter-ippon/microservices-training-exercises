@@ -3,6 +3,7 @@ package com.dornach.order.service;
 import com.dornach.order.client.*;
 import com.dornach.order.domain.Order;
 import com.dornach.order.dto.CreateOrderRequest;
+import com.dornach.order.event.OrderEventPublisher;
 import com.dornach.order.exception.OrderNotFoundException;
 import com.dornach.order.repository.OrderRepository;
 import org.slf4j.Logger;
@@ -22,19 +23,22 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ShipmentClient shipmentClient;
     private final UserClient userClient;
+    private final OrderEventPublisher orderEventPublisher;
 
-    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, UserClient userClient) {
+    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, UserClient userClient,
+                        OrderEventPublisher orderEventPublisher) {
         this.orderRepository = orderRepository;
         this.shipmentClient = shipmentClient;
         this.userClient = userClient;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     /**
-     * Creates a new order with distributed tracing across services.
+     * Creates a new order with user validation.
+     * The order is created in PENDING status and must be confirmed separately.
      * This demonstrates:
-     * 1. Validating user existence via user-service
-     * 2. Creating shipment via shipment-service with M2M authentication
-     * 3. Automatic trace propagation across all services
+     * 1. Validating user existence via user-service (synchronous)
+     * 2. Order creation with proper validation
      */
     public Order createOrder(CreateOrderRequest request) {
         log.info("Creating order for user: {}", request.userId());
@@ -44,7 +48,7 @@ public class OrderService {
         UserResponse user = userClient.getUserById(request.userId());
         log.info("User validated: {} {}", user.firstName(), user.lastName());
 
-        // Step 2: Create the order
+        // Step 2: Create the order in PENDING status
         Order order = new Order(
                 request.userId(),
                 request.productName(),
@@ -54,26 +58,9 @@ public class OrderService {
         );
 
         Order saved = orderRepository.save(order);
-        log.info("Order created with id: {}", saved.getId());
+        log.info("Order created with id: {} in PENDING status", saved.getId());
 
-        // Step 3: Automatically create shipment (call to shipment-service with M2M)
-        log.info("Creating shipment for order: {}", saved.getId());
-        ShipmentRequest shipmentRequest = new ShipmentRequest(
-                saved.getId(),
-                user.firstName() + " " + user.lastName(),
-                request.shippingAddress()
-        );
-
-        ShipmentResponse shipmentResponse = shipmentClient.createShipment(shipmentRequest);
-        log.info("Shipment created with tracking number: {}", shipmentResponse.trackingNumber());
-
-        // Step 4: Update order with shipment details
-        saved.markAsShipped(shipmentResponse.id(), shipmentResponse.trackingNumber());
-        Order updated = orderRepository.save(saved);
-
-        log.info("Order {} fully processed with shipment {}", updated.getId(), shipmentResponse.trackingNumber());
-
-        return updated;
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +87,9 @@ public class OrderService {
 
     /**
      * Confirms an order and creates a shipment via the shipment-service.
-     * This demonstrates synchronous inter-service communication with RestClient.
+     * This demonstrates:
+     * 1. Synchronous inter-service communication with RestClient (M2M auth)
+     * 2. Asynchronous event publishing via SQS for notification-service
      */
     public Order confirmAndShipOrder(UUID orderId, String recipientName) {
         log.info("Confirming and shipping order: {}", orderId);
@@ -110,7 +99,8 @@ public class OrderService {
 
         order.markAsConfirmed();
 
-        // Call shipment-service to create a shipment
+        // Step 1: Call shipment-service to create a shipment (M2M auth)
+        log.info("Creating shipment for order: {}", orderId);
         ShipmentRequest shipmentRequest = new ShipmentRequest(
                 order.getId(),
                 recipientName,
@@ -118,12 +108,17 @@ public class OrderService {
         );
 
         ShipmentResponse shipmentResponse = shipmentClient.createShipment(shipmentRequest);
+        log.info("Shipment created with tracking number: {}", shipmentResponse.trackingNumber());
 
         order.markAsShipped(shipmentResponse.id(), shipmentResponse.trackingNumber());
+        Order updated = orderRepository.save(order);
+
+        // Step 2: Publish order event to SQS for async notification
+        log.info("Publishing order event to SQS...");
+        orderEventPublisher.publishOrderCreated(updated);
 
         log.info("Order {} shipped with tracking number: {}", orderId, shipmentResponse.trackingNumber());
-
-        return orderRepository.save(order);
+        return updated;
     }
 
     public void cancelOrder(UUID orderId) {

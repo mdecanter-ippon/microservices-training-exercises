@@ -1,5 +1,7 @@
 package com.dornach.order.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,8 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.security.oauth2.client.*;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -23,6 +23,8 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(RestClientConfig.class);
+
     @Value("${shipment.service.url}")
     private String shipmentServiceUrl;
 
@@ -31,22 +33,23 @@ public class RestClientConfig {
 
     /**
      * OAuth2AuthorizedClientManager responsible for obtaining and managing OAuth2 tokens.
-     * This is required for client_credentials flow (M2M authentication).
+     * Uses AuthorizedClientServiceOAuth2AuthorizedClientManager for M2M authentication
+     * (client_credentials flow) which works without a servlet request context.
      */
     @Bean
     public OAuth2AuthorizedClientManager authorizedClientManager(
             ClientRegistrationRepository clientRegistrationRepository,
-            OAuth2AuthorizedClientRepository authorizedClientRepository) {
+            OAuth2AuthorizedClientService authorizedClientService) {
 
         OAuth2AuthorizedClientProvider authorizedClientProvider =
                 OAuth2AuthorizedClientProviderBuilder.builder()
                         .clientCredentials()
                         .build();
 
-        DefaultOAuth2AuthorizedClientManager authorizedClientManager =
-                new DefaultOAuth2AuthorizedClientManager(
+        AuthorizedClientServiceOAuth2AuthorizedClientManager authorizedClientManager =
+                new AuthorizedClientServiceOAuth2AuthorizedClientManager(
                         clientRegistrationRepository,
-                        authorizedClientRepository);
+                        authorizedClientService);
 
         authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
 
@@ -62,17 +65,25 @@ public class RestClientConfig {
             String clientRegistrationId) {
 
         return (request, body, execution) -> {
-            OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
-                    .withClientRegistrationId(clientRegistrationId)
-                    .principal("order-service")
-                    .build();
+            log.debug("Attempting to get M2M token for client: {}", clientRegistrationId);
+            try {
+                OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
+                        .withClientRegistrationId(clientRegistrationId)
+                        .principal("order-service")
+                        .build();
 
-            OAuth2AuthorizedClient authorizedClient =
-                    authorizedClientManager.authorize(authorizeRequest);
+                OAuth2AuthorizedClient authorizedClient =
+                        authorizedClientManager.authorize(authorizeRequest);
 
-            if (authorizedClient != null) {
-                String token = authorizedClient.getAccessToken().getTokenValue();
-                request.getHeaders().setBearerAuth(token);
+                if (authorizedClient != null) {
+                    String token = authorizedClient.getAccessToken().getTokenValue();
+                    request.getHeaders().setBearerAuth(token);
+                    log.debug("M2M token added to request");
+                } else {
+                    log.warn("Failed to get M2M token - authorizedClient is null");
+                }
+            } catch (Exception e) {
+                log.error("Error getting M2M token: {}", e.getMessage(), e);
             }
 
             return execution.execute(request, body);

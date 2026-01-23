@@ -3,7 +3,10 @@ package com.dornach.order.controller;
 import com.dornach.order.client.ShipmentClient;
 import com.dornach.order.client.ShipmentRequest;
 import com.dornach.order.client.ShipmentResponse;
+import com.dornach.order.client.UserClient;
+import com.dornach.order.client.UserResponse;
 import com.dornach.order.domain.Order;
+import com.dornach.order.event.OrderEventPublisher;
 import com.dornach.order.domain.OrderStatus;
 import com.dornach.order.dto.ConfirmOrderRequest;
 import com.dornach.order.dto.CreateOrderRequest;
@@ -45,9 +48,28 @@ class OrderControllerIntegrationTest {
     @MockitoBean
     private ShipmentClient shipmentClient;
 
+    @MockitoBean
+    private UserClient userClient;
+
+    @MockitoBean
+    private OrderEventPublisher orderEventPublisher;
+
     @BeforeEach
     void setUp() {
         orderRepository.deleteAll();
+
+        // Default mock: user exists
+        when(userClient.getUserById(any(UUID.class)))
+                .thenReturn(new UserResponse(
+                        UUID.randomUUID(),
+                        "test@example.com",
+                        "Test",
+                        "User",
+                        "user",
+                        "ACTIVE",
+                        Instant.now(),
+                        Instant.now()
+                ));
     }
 
     @Test
@@ -87,7 +109,7 @@ class OrderControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Validation Error"))
-                .andExpect(jsonPath("$.fieldErrors").exists());
+                .andExpect(jsonPath("$.properties.fieldErrors").exists());
     }
 
     @Test

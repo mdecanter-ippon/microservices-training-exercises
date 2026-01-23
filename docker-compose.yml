@@ -18,7 +18,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=apigateway,apigatewayv2,logs
+      - SERVICES=apigateway,apigatewayv2,logs,sqs
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
     networks:
       - dornach-network
@@ -88,6 +88,21 @@ services:
       - user-service
       - shipment-service
       - keycloak
+      - localstack
+    networks:
+      - dornach-network
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - keycloak
+      - localstack
+      - zipkin
     networks:
       - dornach-network
 
