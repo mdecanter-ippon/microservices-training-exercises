@@ -54,7 +54,7 @@
       "enabled": true,
       "publicClient": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "order-service-secret-change-in-production",
+      "secret": "order-service-secret",
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,

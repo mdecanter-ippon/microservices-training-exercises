@@ -1,0 +1,133 @@
+meta {
+  name: Create Order - Distributed Trace
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{alice_token}}
+}
+
+body:json {
+  {
+    "userId": "{{alice_user_id}}",
+    "productName": "Laptop",
+    "quantity": 2,
+    "totalPrice": 2999.99,
+    "shippingAddress": "123 Main St, Springfield, 12345, USA"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Order has ID and status SHIPPED (auto-ships via M2M)", function() {
+    const body = res.getBody();
+    expect(body.id).to.be.a('string');
+    expect(body.status).to.equal('SHIPPED');
+  });
+}
+
+docs {
+  # Create Order - Distributed Trace 🌐
+
+  This request demonstrates **distributed tracing** across 3 microservices.
+
+  **Request Flow:**
+  ```
+  Client
+    |
+    | POST /orders (with Alice's token)
+    ↓
+  order-service
+    |
+    ├─→ GET /users/alice (with M2M token)
+    |   └── user-service ✅ Returns user details
+    |
+    └─→ POST /shipments (with M2M token)
+        └── shipment-service ✅ Creates shipment
+  ```
+
+  **What happens:**
+  1. **Client → order-service**: POST /orders with Alice's JWT
+  2. **order-service → user-service**:
+     - Validates user exists via `GET /users/{userId}`
+     - Uses M2M token (client_credentials) for service-to-service auth
+     - RestClient automatically propagates trace context
+  3. **order-service → shipment-service**:
+     - Creates shipment via `POST /shipments`
+     - Uses M2M token (service-caller role)
+     - RestClient propagates the same trace ID
+  4. All spans are linked by the same **Trace ID**
+  5. Each service exports its spans to Zipkin
+
+  **How to view the distributed trace in Zipkin:**
+  1. Run this request to generate a distributed trace
+  2. Open Zipkin UI: http://localhost:9411
+  3. Click "Run Query" to see recent traces
+  4. Find the trace with `serviceName=order-service` and `http.method=POST`
+  5. Click on the trace to see the full flow:
+     - Total duration across all services
+     - All 3 services participating (order, user, shipment)
+     - Request waterfall showing sequential calls
+     - Tags and logs from each service
+
+  **Expected Trace Structure:**
+  ```
+  Trace ID: abc123def456 (same for all services!)
+
+  order-service: POST /orders (200ms total)
+    ├─ HTTP POST (duration: 200ms)
+    |
+    ├─→ user-service: GET /users/alice (30ms)
+    |   ├─ HTTP GET
+    |   ├─ Tags: http.method=GET, http.status_code=200
+    |   └─ Parent: order-service span
+    |
+    └─→ shipment-service: POST /shipments (80ms)
+        ├─ HTTP POST
+        ├─ Tags: http.method=POST, http.status_code=201
+        └─ Parent: order-service span
+  ```
+
+  **Automatic Context Propagation:**
+  - Spring Boot's RestClient automatically propagates trace context via HTTP headers:
+    - `traceparent`: W3C Trace Context header (OpenTelemetry standard)
+    - Contains: trace-id, parent-span-id, trace-flags
+  - No manual code required - works out of the box!
+
+  **Log Correlation:**
+  Check the logs of all 3 services - they will all have the SAME traceId:
+  ```
+  [order-service,abc123def456,span1] Processing order for user alice
+  [user-service,abc123def456,span2] Fetching user alice
+  [shipment-service,abc123def456,span3] Creating shipment for order...
+  ```
+
+  **Performance Analysis:**
+  - Zipkin shows duration of each service call
+  - Helps identify bottlenecks (which service is slow?)
+  - Shows parallel vs sequential execution
+
+  **Error Tracking:**
+  - If any service fails, the trace shows exactly where
+  - Error tags added automatically: `error=true`, `http.status_code=500`
+  - Stack traces linked to the trace
+
+  **Production Benefits:**
+  1. **Debugging**: Follow a request across all services
+  2. **Performance**: Identify slow services/operations
+  3. **Dependencies**: Visualize service call graph
+  4. **Errors**: Root cause analysis for distributed failures
+
+  **Compare with:**
+  - "Get User by ID - Simple Trace" → Shows single-service tracing
+}

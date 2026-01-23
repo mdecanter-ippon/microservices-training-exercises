@@ -1,8 +1,6 @@
 package com.dornach.order.service;
 
-import com.dornach.order.client.ShipmentClient;
-import com.dornach.order.client.ShipmentRequest;
-import com.dornach.order.client.ShipmentResponse;
+import com.dornach.order.client.*;
 import com.dornach.order.domain.Order;
 import com.dornach.order.dto.CreateOrderRequest;
 import com.dornach.order.exception.OrderNotFoundException;
@@ -23,15 +21,30 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final ShipmentClient shipmentClient;
+    private final UserClient userClient;
 
-    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient) {
+    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient, UserClient userClient) {
         this.orderRepository = orderRepository;
         this.shipmentClient = shipmentClient;
+        this.userClient = userClient;
     }
 
+    /**
+     * Creates a new order with distributed tracing across services.
+     * This demonstrates:
+     * 1. Validating user existence via user-service
+     * 2. Creating shipment via shipment-service with M2M authentication
+     * 3. Automatic trace propagation across all services
+     */
     public Order createOrder(CreateOrderRequest request) {
         log.info("Creating order for user: {}", request.userId());
 
+        // Step 1: Validate user exists (call to user-service)
+        log.info("Validating user exists...");
+        UserResponse user = userClient.getUserById(request.userId());
+        log.info("User validated: {} {}", user.firstName(), user.lastName());
+
+        // Step 2: Create the order
         Order order = new Order(
                 request.userId(),
                 request.productName(),
@@ -43,7 +56,24 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         log.info("Order created with id: {}", saved.getId());
 
-        return saved;
+        // Step 3: Automatically create shipment (call to shipment-service with M2M)
+        log.info("Creating shipment for order: {}", saved.getId());
+        ShipmentRequest shipmentRequest = new ShipmentRequest(
+                saved.getId(),
+                user.firstName() + " " + user.lastName(),
+                request.shippingAddress()
+        );
+
+        ShipmentResponse shipmentResponse = shipmentClient.createShipment(shipmentRequest);
+        log.info("Shipment created with tracking number: {}", shipmentResponse.trackingNumber());
+
+        // Step 4: Update order with shipment details
+        saved.markAsShipped(shipmentResponse.id(), shipmentResponse.trackingNumber());
+        Order updated = orderRepository.save(saved);
+
+        log.info("Order {} fully processed with shipment {}", updated.getId(), shipmentResponse.trackingNumber());
+
+        return updated;
     }
 
     @Transactional(readOnly = true)

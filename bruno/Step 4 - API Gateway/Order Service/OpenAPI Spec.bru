@@ -1,0 +1,35 @@
+meta {
+  name: OpenAPI Spec
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{gateway}}/orders/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  const isGatewayEnv = bru.getEnvVar("env_name") === "gateway";
+
+  test("Status is 200 (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      expect(res.getStatus()).to.equal(200);
+    }
+  });
+
+  test("OpenAPI spec is valid (skipped if not gateway)", function() {
+    if (isGatewayEnv) {
+      const body = res.getBody();
+      expect(body.openapi).to.equal("3.1.0");
+      expect(body.info.title).to.equal("Dornach Order Service API");
+    }
+  });
+}
+
+docs {
+  ✅ Public endpoint - No JWT required
+
+  Retrieves the OpenAPI 3.1 specification for the Order Service via the gateway.
+}

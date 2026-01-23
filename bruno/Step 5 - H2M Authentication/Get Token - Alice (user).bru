@@ -21,17 +21,17 @@ tests {
   test("Status is 200", function() {
     expect(res.getStatus()).to.equal(200);
   });
-
+  
   test("Access token is present", function() {
     const body = res.getBody();
     expect(body.access_token).to.be.a('string');
     expect(body.access_token.length).to.be.greaterThan(0);
   });
-
+  
   test("Token type is Bearer", function() {
     expect(res.getBody().token_type).to.equal("Bearer");
   });
-
+  
   // Save token to environment for use in other requests
   if (res.getStatus() === 200) {
     const token = res.getBody().access_token;
@@ -41,24 +41,24 @@ tests {
 
 docs {
   # Get JWT Token for Alice (user role)
-
+  
   This request authenticates Alice and obtains a JWT access token using the OAuth2 Resource Owner Password Credentials grant (password flow).
-
+  
   **User Details:**
   - Username: alice
   - Password: alice123
   - Role: user
-
+  
   **Token Usage:**
   The access token is automatically saved to the `alice_token` environment variable and can be used in subsequent authenticated requests.
-
+  
   **JWT Contents:**
   The token includes:
   - User identity (username, email)
   - Assigned roles (user)
   - Token expiration time
   - Issuer (Keycloak realm)
-
+  
   After running this request, you can use the token in other requests by adding:
   ```
   Authorization: Bearer {{alice_token}}

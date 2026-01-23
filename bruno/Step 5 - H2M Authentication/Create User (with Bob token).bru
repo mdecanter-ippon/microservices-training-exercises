@@ -1,0 +1,77 @@
+meta {
+  name: Create User (with Bob token)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{user_service_url}}/users
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bob_token}}
+}
+
+body:json {
+  {
+    "email": "david@dornach.com",
+    "firstName": "David",
+    "lastName": "Smith",
+    "role": "EMPLOYEE"
+  }
+}
+
+tests {
+  test("Status is 201 or 409 (if user exists)", function() {
+    const status = res.getStatus();
+    expect([201, 409]).to.include(status);
+  });
+
+  test("User data is correct when created", function() {
+    if (res.getStatus() === 201) {
+      const body = res.getBody();
+      expect(body.email).to.equal("david@dornach.com");
+      expect(body.firstName).to.equal("David");
+      expect(body.lastName).to.equal("Smith");
+      expect(body.role).to.equal("EMPLOYEE");
+    }
+  });
+
+  test("User has generated ID when created", function() {
+    if (res.getStatus() === 201) {
+      const body = res.getBody();
+      expect(body.id).to.be.a('string');
+      expect(body.id.length).to.be.greaterThan(0);
+    }
+  });
+}
+
+docs {
+  # Create User (Authenticated with Bob's Token)
+
+  This request creates a new user using Bob's JWT token for authentication.
+
+  **Prerequisites:**
+  1. Run "Get Token - Bob (admin)" first to obtain the access token
+  2. The token is automatically stored in `bob_token` variable
+
+  **Expected Behavior:**
+  - ✅ Returns HTTP 201 with created user data (first run)
+  - ✅ Returns HTTP 409 if user already exists (subsequent runs)
+  - ✅ Bob's token (admin role) is used for this operation
+  - ✅ User is persisted in the database
+
+  **Request Body:**
+  ```json
+  {
+    "email": "david@dornach.com",
+    "firstName": "David",
+    "lastName": "Smith",
+    "role": "EMPLOYEE"
+  }
+  ```
+
+  **Note:** The test accepts both 201 (created) and 409 (exists) as valid responses.
+}

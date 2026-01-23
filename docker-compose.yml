@@ -37,6 +37,14 @@ services:
     networks:
       - dornach-network
 
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - dornach-network
+
   # ==================== Microservices ====================
   user-service:
     build: ./user-service
@@ -75,7 +83,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SHIPMENT_SERVICE_URL=http://shipment-service:8082
       - USER_SERVICE_URL=http://user-service:8081
-      - ORDER_SERVICE_CLIENT_SECRET=${ORDER_SERVICE_CLIENT_SECRET}
+      - ORDER_SERVICE_CLIENT_SECRET=${ORDER_SERVICE_CLIENT_SECRET:-order-service-secret-change-in-production}
     depends_on:
       - user-service
       - shipment-service
