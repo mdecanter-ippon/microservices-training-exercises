@@ -1,0 +1,64 @@
+meta {
+  name: List Users (with Alice token)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{user_service_url}}/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{alice_token}}
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    const body = res.getBody();
+    expect(Array.isArray(body)).to.be.true;
+  });
+
+  test("Users have required fields", function() {
+    const users = res.getBody();
+    if (users.length > 0) {
+      const user = users[0];
+      expect(user).to.have.property('id');
+      expect(user).to.have.property('email');
+      expect(user).to.have.property('firstName');
+      expect(user).to.have.property('lastName');
+    }
+  });
+}
+
+docs {
+  # List Users (Authenticated with Alice's Token)
+
+  This request lists all users using Alice's JWT token for authentication.
+
+  **Prerequisites:**
+  1. Run "Get Token - Alice (user)" first to obtain the access token
+  2. The token is automatically stored in `alice_token` variable
+
+  **Expected Behavior:**
+  - ✅ Returns HTTP 200 with list of users
+  - ✅ Alice's token (user role) is sufficient for this operation
+  - ✅ JWT is validated by user-service against Keycloak
+
+  **Authentication:**
+  The request includes:
+  ```
+  Authorization: Bearer {{alice_token}}
+  ```
+
+  The service validates the JWT by:
+  1. Checking the signature using Keycloak's public keys
+  2. Verifying the issuer matches the configured realm
+  3. Checking token expiration
+  4. Extracting user identity and roles from claims
+}

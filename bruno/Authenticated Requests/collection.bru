@@ -1,0 +1,43 @@
+name: Authenticated Requests
+type: folder
+
+docs {
+  # Authenticated Requests 🔒
+
+  This folder contains examples of API requests that require JWT authentication.
+
+  **Prerequisites:**
+  1. Keycloak must be running and configured
+  2. Run requests from the "Authentication" folder first to obtain tokens
+  3. Tokens are automatically stored in environment variables
+
+  **Available Tokens:**
+  - `{{alice_token}}` - User role only
+  - `{{bob_token}}` - User + Admin roles
+
+  **How It Works:**
+  1. Each request includes: `Authorization: Bearer {{token_variable}}`
+  2. The service validates the JWT by:
+     - Verifying signature with Keycloak public keys
+     - Checking issuer matches configured realm
+     - Validating expiration time
+     - Extracting user identity and roles
+
+  **Request Examples:**
+  - List Users (with Alice token) - GET with user role
+  - Create User (with Bob token) - POST with admin role
+  - List Shipments (with Alice token) - GET shipments
+  - List Orders (with Bob token) - GET orders
+
+  **Expected Behaviors:**
+  - ✅ Valid token → HTTP 200/201 with data
+  - ❌ No token → HTTP 401 Unauthorized
+  - ❌ Expired token → HTTP 401 Unauthorized
+  - ❌ Invalid signature → HTTP 401 Unauthorized
+
+  **Token Expiration:**
+  Tokens expire after 1 hour. If you get 401 errors:
+  1. Check if token expired
+  2. Re-run the authentication request
+  3. New token will be saved automatically
+}

@@ -18,7 +18,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=apigateway,apigatewayv2,logs,sqs
+      - SERVICES=apigateway,apigatewayv2,logs
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
     networks:
       - dornach-network
@@ -34,14 +34,6 @@ services:
       - POSTGRES_DB=dornach
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks:
-      - dornach-network
-
-  zipkin:
-    image: openzipkin/zipkin:3
-    container_name: zipkin
-    ports:
-      - "9411:9411"
     networks:
       - dornach-network
 
@@ -83,26 +75,11 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SHIPMENT_SERVICE_URL=http://shipment-service:8082
       - USER_SERVICE_URL=http://user-service:8081
-      - ORDER_SERVICE_CLIENT_SECRET=${ORDER_SERVICE_CLIENT_SECRET:-order-service-secret-change-in-production}
+      - ORDER_SERVICE_CLIENT_SECRET=${ORDER_SERVICE_CLIENT_SECRET}
     depends_on:
       - user-service
       - shipment-service
       - keycloak
-      - localstack
-    networks:
-      - dornach-network
-
-  notification-service:
-    build: ./notification-service
-    container_name: notification-service
-    ports:
-      - "8084:8084"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    depends_on:
-      - keycloak
-      - localstack
-      - zipkin
     networks:
       - dornach-network
 

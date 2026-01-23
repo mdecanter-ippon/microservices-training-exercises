@@ -1,0 +1,40 @@
+name: Authentication
+type: folder
+
+docs {
+  # Authentication 🔐
+
+  This folder contains requests to obtain JWT access tokens from Keycloak.
+
+  **Purpose:**
+  - Authenticate users (Alice and Bob)
+  - Obtain JWT access tokens
+  - Store tokens in environment variables for use in other requests
+
+  **Available Users:**
+
+  | Username | Password | Roles | Environment Variable |
+  |----------|----------|-------|---------------------|
+  | alice    | alice123 | user  | `alice_token`       |
+  | bob      | bob123   | user, admin | `bob_token`    |
+
+  **How to Use:**
+  1. Run "Get Token - Alice (user)" or "Get Token - Bob (admin)"
+  2. The access token is automatically saved to the environment
+  3. Use `{{alice_token}}` or `{{bob_token}}` in other requests
+
+  **Token Details:**
+  - Format: JWT (JSON Web Token)
+  - Type: Bearer
+  - Expiration: 1 hour (3600 seconds)
+  - Contains: User identity, roles, issuer, expiration
+
+  **Grant Type:**
+  These requests use the OAuth2 **Resource Owner Password Credentials** grant (password flow).
+  This is appropriate for:
+  - Direct user authentication
+  - Testing and development
+  - Trusted applications
+
+  **Note:** In production, prefer Authorization Code Flow with PKCE for browser-based apps.
+}

@@ -95,7 +95,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak:8080/realms/dornach
+          issuer-uri: http://localhost:8080/realms/dornach
+          jwk-set-uri: http://keycloak:8080/realms/dornach/protocol/openid-connect/certs
       client:
         provider:
           keycloak:
