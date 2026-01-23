@@ -3,6 +3,7 @@ package com.dornach.user.controller;
 import com.dornach.user.dto.CreateUserRequest;
 import com.dornach.user.dto.UpdateUserRequest;
 import com.dornach.user.dto.UserResponse;
+import com.dornach.user.mapper.UserMapper;
 import com.dornach.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,9 +30,11 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserMapper userMapper) {
         this.userService = userService;
+        this.userMapper = userMapper;
     }
 
     @PostMapping
@@ -71,7 +74,7 @@ public class UserController {
     @ApiResponse(responseCode = "409", ref = "Conflict")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         var user = userService.createUser(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.toResponse(user));
     }
 
     @GetMapping("/{id}")
@@ -90,7 +93,7 @@ public class UserController {
             @Parameter(description = "User ID (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable UUID id) {
         var user = userService.getUserById(id);
-        return ResponseEntity.ok(UserResponse.from(user));
+        return ResponseEntity.ok(userMapper.toResponse(user));
     }
 
     @GetMapping
@@ -107,7 +110,7 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         var users = userService.getAllUsers()
                 .stream()
-                .map(UserResponse::from)
+                .map(userMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(users);
     }
@@ -131,7 +134,7 @@ public class UserController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateUserRequest request) {
         var user = userService.updateUser(id, request);
-        return ResponseEntity.ok(UserResponse.from(user));
+        return ResponseEntity.ok(userMapper.toResponse(user));
     }
 
     @DeleteMapping("/{id}")

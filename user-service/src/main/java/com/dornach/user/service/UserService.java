@@ -1,10 +1,12 @@
 package com.dornach.user.service;
 
 import com.dornach.user.domain.User;
+import com.dornach.user.domain.UserStatus;
 import com.dornach.user.dto.CreateUserRequest;
 import com.dornach.user.dto.UpdateUserRequest;
 import com.dornach.user.exception.EmailAlreadyExistsException;
 import com.dornach.user.exception.UserNotFoundException;
+import com.dornach.user.mapper.UserMapper;
 import com.dornach.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +23,11 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserMapper userMapper) {
         this.userRepository = userRepository;
+        this.userMapper = userMapper;
     }
 
     public User createUser(CreateUserRequest request) {
@@ -33,12 +37,8 @@ public class UserService {
             throw new EmailAlreadyExistsException(request.email());
         }
 
-        User user = new User(
-                request.email(),
-                request.firstName(),
-                request.lastName(),
-                request.role()
-        );
+        User user = userMapper.toEntity(request);
+        user.setStatus(UserStatus.ACTIVE);
 
         User saved = userRepository.save(user);
         log.info("User created with id: {}", saved.getId());
