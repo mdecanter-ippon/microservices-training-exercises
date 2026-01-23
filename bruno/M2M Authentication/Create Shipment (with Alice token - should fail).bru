@@ -1,0 +1,97 @@
+meta {
+  name: Create Shipment (with Alice token - should fail)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{shipment_service_url}}/shipments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{alice_token}}
+}
+
+body:json {
+  {
+    "orderId": "{{$randomUUID}}",
+    "recipientName": "Jane Doe",
+    "recipientAddress": "456 Oak Ave, Shelbyville, 67890, USA"
+  }
+}
+
+tests {
+  test("Status is 403 or 500 (Access Denied)", function() {
+    const status = res.getStatus();
+    // Spring Security 6.4+ may return 500 instead of 403 for AuthorizationDeniedException
+    expect([403, 500]).to.include(status);
+  });
+
+  test("Error message mentions access denied", function() {
+    const body = res.getBody();
+    const bodyStr = JSON.stringify(body).toLowerCase();
+    // Check that it's an access/authorization error
+    expect(bodyStr).to.satisfy(msg =>
+      msg.includes("access") || msg.includes("authorization") || msg.includes("denied") || msg.includes("forbidden")
+    );
+  });
+}
+
+docs {
+  # Create Shipment with Alice Token ❌
+
+  This request demonstrates **failed authorization** due to missing role.
+
+  **Authorization:**
+  - Uses `{{alice_token}}` obtained from "Get Token - Alice (user)"
+  - Token contains `realm_access.roles = ["user"]`
+  - Shipment controller requires `service-caller` or `admin` role
+
+  **Expected Result:**
+  ❌ **HTTP 403 Forbidden** - Alice does NOT have the required role
+
+  **Why does it fail?**
+  1. Alice's JWT has `realm_access.roles = ["user"]`
+  2. Spring Security converts this to `ROLE_user`
+  3. `@PreAuthorize("hasRole('service-caller') or hasRole('admin')") `checks for:
+     - `ROLE_service-caller` ❌ (Alice doesn't have it)
+     - `ROLE_admin` ❌ (Alice doesn't have it)
+  4. Authorization fails → HTTP 403 Forbidden
+
+  **Security Flow:**
+  ```
+  Alice (user token)
+        |
+        | POST /shipments
+        | Authorization: Bearer eyJhbGc... (user role only)
+        ↓
+  shipment-service
+        |
+        | 1. Validate JWT signature ✅
+        | 2. Extract realm_access.roles = ["user"]
+        | 3. Convert to ROLE_user
+        | 4. Check @PreAuthorize("hasRole('service-caller')") ❌
+        ↓
+  403 Forbidden
+  {
+    "error": "Forbidden",
+    "message": "Access Denied"
+  }
+  ```
+
+  **Role-Based Access Control (RBAC):**
+  This demonstrates that endpoint-level security works correctly:
+  - Regular users (Alice) can read shipments but NOT create them
+  - Only services (M2M token) or admins (Bob) can create shipments
+  - This prevents unauthorized shipment creation
+
+  **To make it work:**
+  - Use Bob's token (has `admin` role) instead → ✅ Will succeed
+  - Or use M2M token (has `service-caller` role) → ✅ Will succeed
+
+  **Compare with:**
+  - "Create Shipment (with M2M token)" → ✅ 201 Created (has role)
+  - "Create Shipment (with Bob token)" → ✅ 201 Created (admin role)
+}

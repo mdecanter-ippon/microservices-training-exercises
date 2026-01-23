@@ -1,0 +1,96 @@
+meta {
+  name: Get M2M Token
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloak_url}}/realms/dornach/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  client_id: order-service-client
+  client_secret: order-service-secret-change-in-production
+  grant_type: client_credentials
+  scope: openid
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Access token is present", function() {
+    const body = res.getBody();
+    expect(body.access_token).to.be.a('string');
+    expect(body.access_token.length).to.be.greaterThan(0);
+  });
+
+  test("Token type is Bearer", function() {
+    expect(res.getBody().token_type).to.equal("Bearer");
+  });
+
+  test("Grant type is client_credentials (no refresh token)", function() {
+    const body = res.getBody();
+    // Client credentials flow doesn't provide refresh tokens
+    expect(body.refresh_token).to.be.undefined;
+  });
+
+  // Save token to environment for use in other requests
+  if (res.getStatus() === 200) {
+    const token = res.getBody().access_token;
+    bru.setEnvVar("m2m_token", token);
+  }
+}
+
+docs {
+  # Get M2M Token (Client Credentials Flow)
+
+  This request obtains a JWT token using the **OAuth2 Client Credentials** grant type.
+
+  **Client Details:**
+  - Client ID: `order-service-client`
+  - Client Secret: `order-service-secret-change-in-production`
+  - Grant Type: `client_credentials`
+  - Scope: `openid`
+
+  **Service Account:**
+  When Keycloak issues this token, it's on behalf of a **service account user**:
+  - Username: `service-account-order-service-client` (auto-created by Keycloak)
+  - Role: `service-caller`
+
+  **Token Characteristics:**
+  - ✅ Has `service-caller` role in `realm_access.roles`
+  - ❌ No `refresh_token` (client credentials don't support refresh)
+  - ⏱️ Expires after 1 hour (default)
+  - 🔑 Subject (`sub`) is the service account user ID, not a human
+
+  **JWT Payload Example:**
+  ```json
+  {
+    "exp": 1735567234,
+    "iat": 1735563634,
+    "jti": "...",
+    "iss": "http://localhost:8080/realms/dornach",
+    "sub": "abc123...",  // Service account user ID
+    "typ": "Bearer",
+    "azp": "order-service-client",
+    "realm_access": {
+      "roles": ["service-caller"]
+    },
+    "scope": "openid profile email",
+    "clientId": "order-service-client",
+    "client_id": "order-service-client"
+  }
+  ```
+
+  **After running this request:**
+  The token is saved to `{{m2m_token}}` and can be used in subsequent M2M requests.
+
+  **Decode the token:**
+  ```bash
+  echo "{{m2m_token}}" | cut -d. -f2 | base64 -d | jq
+  ```
+}

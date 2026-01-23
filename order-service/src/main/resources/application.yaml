@@ -27,7 +27,7 @@ spring:
           shipment-service:
             provider: keycloak
             client-id: order-service-client
-            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:secret}
+            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret-change-in-production}
             authorization-grant-type: client_credentials
             scope: openid
         provider:
@@ -98,6 +98,13 @@ spring:
           issuer-uri: http://localhost:8080/realms/dornach
           jwk-set-uri: http://keycloak:8080/realms/dornach/protocol/openid-connect/certs
       client:
+        registration:
+          shipment-service:
+            provider: keycloak
+            client-id: order-service-client
+            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret-change-in-production}
+            authorization-grant-type: client_credentials
+            scope: openid
         provider:
           keycloak:
             token-uri: http://keycloak:8080/realms/dornach/protocol/openid-connect/token

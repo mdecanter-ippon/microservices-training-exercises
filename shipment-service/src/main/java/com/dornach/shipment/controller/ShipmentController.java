@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,9 +28,11 @@ public class ShipmentController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new shipment")
+    @PreAuthorize("hasRole('service-caller') or hasRole('admin')")
+    @Operation(summary = "Create a new shipment (requires service-caller or admin role)")
     @ApiResponse(responseCode = "201", description = "Shipment created successfully")
     @ApiResponse(responseCode = "400", description = "Validation error")
+    @ApiResponse(responseCode = "403", description = "Forbidden - missing required role")
     public ResponseEntity<ShipmentResponse> createShipment(@Valid @RequestBody CreateShipmentRequest request) {
         var shipment = shipmentService.createShipment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ShipmentResponse.from(shipment));

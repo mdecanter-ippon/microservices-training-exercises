@@ -118,15 +118,49 @@ USERS=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
 echo "   ✓ Users: $USERS"
 
 echo ""
+
+# Configure M2M (Machine-to-Machine) service account
+echo "🤖 Configuring M2M service account..."
+
+# Get order-service-client ID
+ORDER_CLIENT_ID=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+    "${KEYCLOAK_URL}/admin/realms/dornach/clients" | jq -r '.[] | select(.clientId=="order-service-client") | .id')
+
+if [ -z "$ORDER_CLIENT_ID" ] || [ "$ORDER_CLIENT_ID" = "null" ]; then
+    echo "⚠️  Warning: order-service-client not found, skipping M2M configuration"
+else
+    # Get service account user ID
+    SERVICE_ACCOUNT_USER_ID=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+        "${KEYCLOAK_URL}/admin/realms/dornach/clients/${ORDER_CLIENT_ID}/service-account-user" | jq -r '.id')
+
+    # Get service-caller role ID
+    SERVICE_CALLER_ROLE=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+        "${KEYCLOAK_URL}/admin/realms/dornach/roles/service-caller" | jq -c '{id: .id, name: .name}')
+
+    # Assign service-caller role to service account
+    curl -s -X POST -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "[${SERVICE_CALLER_ROLE}]" \
+        "${KEYCLOAK_URL}/admin/realms/dornach/users/${SERVICE_ACCOUNT_USER_ID}/role-mappings/realm" > /dev/null
+
+    echo "   ✓ M2M Client: order-service-client"
+    echo "   ✓ Service Account Role: service-caller"
+fi
+
+echo ""
 echo "🎉 Keycloak setup completed successfully!"
 echo ""
 echo "📋 Configuration Summary:"
 echo "   - Realm: dornach"
-echo "   - Client: dornach-web (public)"
-echo "   - Roles: user, admin"
+echo "   - Clients:"
+echo "     • dornach-web (public) - for H2M authentication"
+echo "     • order-service-client (confidential) - for M2M authentication"
+echo "   - Roles: user, admin, service-caller"
 echo "   - Users:"
 echo "     • alice (password: alice123) - role: user"
 echo "     • bob (password: bob123) - roles: user, admin"
+echo "   - Service Accounts:"
+echo "     • service-account-order-service-client - role: service-caller"
 echo ""
 echo "🔗 Access Keycloak:"
 echo "   - Admin Console: ${KEYCLOAK_URL}/admin"
