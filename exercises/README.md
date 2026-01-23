@@ -15,6 +15,7 @@ This folder contains all exercise instructions for the microservices training.
 | 7 | [STEP_7_DISTRIBUTED_TRACING.md](STEP_7_DISTRIBUTED_TRACING.md) | Micrometer, Zipkin, Log correlation |
 | Bonus A | [BONUS_A_TESTCONTAINERS.md](BONUS_A_TESTCONTAINERS.md) | PostgreSQL + Keycloak containers |
 | Bonus B | [BONUS_B_ASYNC_SQS.md](BONUS_B_ASYNC_SQS.md) | Spring Cloud AWS, DLQ |
+| Bonus C | [BONUS_C_MAPSTRUCT.md](BONUS_C_MAPSTRUCT.md) | MapStruct, DTO mapping |
 
 ## Getting Started
 
@@ -31,4 +32,4 @@ git stash && git checkout step-1-complete
 
 Available checkpoints:
 - `step-1-complete` through `step-7-complete`
-- `bonus-a-complete`, `bonus-b-complete`
+- `bonus-a-complete`, `bonus-b-complete`, `bonus-c-complete`
