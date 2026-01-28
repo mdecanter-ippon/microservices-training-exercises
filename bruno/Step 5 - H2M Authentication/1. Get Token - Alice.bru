@@ -1,0 +1,48 @@
+meta {
+  name: 1. Get Token - Alice
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloak_url}}/realms/dornach/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  client_id: dornach-web
+  username: alice
+  password: alice123
+  grant_type: password
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("alice_token", res.getBody().access_token);
+  }
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has access_token", function() {
+    expect(res.getBody().access_token).to.be.a("string");
+  });
+
+  test("Token type is Bearer", function() {
+    expect(res.getBody().token_type).to.equal("Bearer");
+  });
+}
+
+docs {
+  Get JWT token for Alice (user role).
+
+  The token is automatically saved to alice_token environment variable.
+
+  Before running:
+  1. Keycloak must be running: docker-compose up -d keycloak
+  2. Realm must be configured: ./infra/setup-keycloak.sh
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Delete User
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{user_service_url}}/users/{{user_id}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 204 No Content", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Delete a user.
+
+  Before running: Create a user first and copy the ID to the user_id variable.
+
+  Expected: 204 No Content (empty response body)
+}
