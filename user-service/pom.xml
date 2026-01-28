@@ -7,7 +7,7 @@
 
     <parent>
         <groupId>com.dornach</groupId>
-        <artifactId>microservices-parent</artifactId>
+        <artifactId>microservices-training</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
