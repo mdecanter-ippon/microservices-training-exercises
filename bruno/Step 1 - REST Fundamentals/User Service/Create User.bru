@@ -12,11 +12,15 @@ post {
 
 body:json {
   {
-    "email": "alice@dornach.com",
+    "email": "alice-{{test_timestamp}}@dornach.com",
     "firstName": "Alice",
     "lastName": "Martin",
     "role": "EMPLOYEE"
   }
+}
+
+script:pre-request {
+  bru.setEnvVar("test_timestamp", Date.now());
 }
 
 script:post-response {
@@ -34,14 +38,15 @@ tests {
     expect(res.getBody().id).to.be.a("string");
   });
 
-  test("Response has correct email", function() {
-    expect(res.getBody().email).to.equal("alice@dornach.com");
+  test("Response has correct email format", function() {
+    expect(res.getBody().email).to.match(/alice-\d+@dornach\.com/);
   });
 }
 
 docs {
   Create a new user.
 
+  Uses a unique timestamp-based email to avoid conflicts on repeated runs.
   The user ID is automatically saved to user_id environment variable
   for use in subsequent tests (Get, Update, Delete).
 
