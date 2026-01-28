@@ -50,15 +50,20 @@ mvn clean compile
 
 ### 2. Start Infrastructure
 
-```bash
-# Start PostgreSQL (for later steps)
-docker-compose up -d postgres
+> **Note:** Steps 1-3 use H2 in-memory database by default. No infrastructure is required until Step 4.
 
-# For Step 4+: Start LocalStack
+```bash
+# Step 4+: Start LocalStack (API Gateway)
 docker-compose up -d localstack
 
-# For Step 5+: Start Keycloak
+# Step 5+: Start Keycloak (Authentication)
 docker-compose up -d keycloak
+
+# Step 7: Start Zipkin (Distributed Tracing)
+docker-compose up -d zipkin
+
+# Optional: PostgreSQL (only needed for Docker profile)
+docker-compose up -d postgres
 ```
 
 ### 3. Run a Service

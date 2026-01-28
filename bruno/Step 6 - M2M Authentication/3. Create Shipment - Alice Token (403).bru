@@ -1,0 +1,39 @@
+meta {
+  name: 3. Create Shipment - Alice Token (403)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{shipment_service_url}}/shipments
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{alice_token}}
+}
+
+body:json {
+  {
+    "orderId": "550e8400-e29b-41d4-a716-446655440001",
+    "recipientName": "Alice",
+    "recipientAddress": "456 Other St"
+  }
+}
+
+tests {
+  test("Status is 403 Forbidden", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+docs {
+  Try to create shipment with Alice's H2M token.
+
+  Before running: Get Alice's token from Step 5
+
+  Expected: 403 Forbidden - Alice has "user" role, not "service-caller"
+
+  This demonstrates RBAC: only services (M2M) or admins can create shipments.
+}

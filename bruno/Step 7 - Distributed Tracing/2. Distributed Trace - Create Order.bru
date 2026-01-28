@@ -1,0 +1,50 @@
+meta {
+  name: 2. Distributed Trace - Create Order
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bob_token}}
+}
+
+body:json {
+  {
+    "userId": "{{user_id}}",
+    "productName": "Laptop",
+    "quantity": 1,
+    "totalPrice": 999.99,
+    "shippingAddress": "123 Main St"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Multi-service distributed trace.
+
+  This request triggers:
+  1. order-service receives request
+  2. order-service calls user-service (validate user)
+  3. order-service calls shipment-service (create shipment)
+
+  After running:
+  1. Open Zipkin: http://localhost:9411
+  2. Select serviceName: order-service
+  3. Click "Run Query"
+  4. Find trace with multiple spans
+  5. Click to see the distributed trace timeline
+
+  Expected: 3+ spans across order-service, user-service, shipment-service
+  All spans share the same Trace ID.
+}

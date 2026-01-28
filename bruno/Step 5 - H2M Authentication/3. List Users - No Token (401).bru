@@ -1,0 +1,25 @@
+meta {
+  name: 3. List Users - No Token (401)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{user_service_url}}/users
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 401 Unauthorized", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+docs {
+  Test that endpoints require authentication after Step 5.
+
+  Without a token, the request should be rejected with 401.
+
+  This proves Spring Security is protecting the endpoint.
+}

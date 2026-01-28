@@ -1,0 +1,41 @@
+meta {
+  name: Update User
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{user_service_url}}/users/{{user_id}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "firstName": "Alice Updated",
+    "lastName": "Martin-Dupont",
+    "role": "MANAGER"
+  }
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("First name is updated", function() {
+    expect(res.getBody().firstName).to.equal("Alice Updated");
+  });
+
+  test("Role is updated", function() {
+    expect(res.getBody().role).to.equal("MANAGER");
+  });
+}
+
+docs {
+  Update an existing user.
+
+  Before running: Create a user first and copy the ID to the user_id variable.
+
+  Expected: 200 OK with updated user data
+}
