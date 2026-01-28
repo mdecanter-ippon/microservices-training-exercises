@@ -1,0 +1,44 @@
+meta {
+  name: Validation Error
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{user_service_url}}/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "invalid-email",
+    "firstName": "",
+    "lastName": "",
+    "role": ""
+  }
+}
+
+tests {
+  test("Status is 400 Bad Request", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("Response is RFC 7807 format", function() {
+    expect(res.getBody().type).to.be.a("string");
+    expect(res.getBody().title).to.equal("Validation Error");
+    expect(res.getBody().status).to.equal(400);
+  });
+
+  test("Has field errors", function() {
+    expect(res.getBody().errors).to.be.an("object");
+  });
+}
+
+docs {
+  Test validation error handling with invalid data.
+
+  Tests Exercise 4.1 - MethodArgumentNotValidException should return RFC 7807 format.
+
+  Expected: 400 Bad Request with ProblemDetail and field errors
+}

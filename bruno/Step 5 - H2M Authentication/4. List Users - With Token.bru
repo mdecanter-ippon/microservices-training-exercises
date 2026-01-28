@@ -1,0 +1,33 @@
+meta {
+  name: 4. List Users - With Token
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{user_service_url}}/users
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{alice_token}}
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  List users with valid JWT token.
+
+  Before running: Get a token first (run "1. Get Token - Alice")
+
+  Expected: 200 OK with users array
+}

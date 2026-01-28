@@ -1,0 +1,27 @@
+meta {
+  name: List Shipments via Gateway
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{gateway}}/shipments
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  List shipments via API Gateway.
+
+  Verifies /shipments/* routes to shipment-service.
+}
