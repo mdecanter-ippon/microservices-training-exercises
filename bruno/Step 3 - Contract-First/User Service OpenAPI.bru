@@ -1,0 +1,35 @@
+meta {
+  name: User Service OpenAPI
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{user_service_url}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Has OpenAPI version", function() {
+    expect(res.getBody().openapi).to.include("3.");
+  });
+
+  test("Has paths section", function() {
+    expect(res.getBody().paths).to.be.an("object");
+  });
+
+  test("Has /users endpoint", function() {
+    expect(res.getBody().paths["/users"]).to.be.an("object");
+  });
+}
+
+docs {
+  Verify OpenAPI spec is available for user-service.
+
+  Also try in browser: http://localhost:8081/swagger-ui.html
+}

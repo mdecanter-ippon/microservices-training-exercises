@@ -1,0 +1,33 @@
+meta {
+  name: 1. Simple Trace - Get User
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{user_service_url}}/users/{{user_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{alice_token}}
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Simple single-service trace.
+
+  After running:
+  1. Open Zipkin: http://localhost:9411
+  2. Click "Run Query"
+  3. Find trace with serviceName: user-service
+  4. Click to see span details
+
+  Expected: Single span showing GET /users/{id}
+}
