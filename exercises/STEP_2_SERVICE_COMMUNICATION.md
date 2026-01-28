@@ -148,6 +148,8 @@ shipment:
     url: http://localhost:8082
 ```
 
+> ⚠️ **Important:** Add these properties **before** the `---` separator (docker profile section). Properties after `---` only apply when that profile is active. Your local development uses the default profile.
+
 **Verify:** Start order-service. If it starts without errors, the configuration is correct.
 
 ---
