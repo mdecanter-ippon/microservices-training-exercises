@@ -1,0 +1,25 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{order_service_url}}/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Service is UP", function() {
+    expect(res.getBody().status).to.equal("UP");
+  });
+}
+
+docs {
+  Verify order-service is running before testing service communication.
+}

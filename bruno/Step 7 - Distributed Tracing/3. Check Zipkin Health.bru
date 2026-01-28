@@ -1,0 +1,24 @@
+meta {
+  name: 3. Check Zipkin Health
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:9411/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Zipkin is running", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Verify Zipkin is running.
+
+  Before running distributed tracing tests:
+  docker-compose up -d zipkin
+}

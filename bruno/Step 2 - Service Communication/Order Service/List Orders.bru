@@ -1,0 +1,27 @@
+meta {
+  name: List Orders
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{order_service_url}}/orders
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  List all orders.
+
+  At Step 2, no authentication is required.
+}

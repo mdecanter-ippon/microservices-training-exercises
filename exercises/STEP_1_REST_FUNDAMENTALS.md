@@ -3,6 +3,7 @@
 ## Objectives
 
 By the end of this exercise, you will:
+- Complete a JPA Entity with annotations and timestamps
 - Create DTOs using Java Records
 - Implement a REST controller with proper HTTP semantics
 - Add Bean Validation to your DTOs
@@ -43,6 +44,8 @@ The `User` entity is partially implemented. Complete it with:
 - An enum `UserRole` with values: `EMPLOYEE`, `MANAGER`, `ADMIN`
 - Timestamps for `createdAt` and `updatedAt`
 
+> **Warning:** Use `@Table(name = "users")` with an **"s"**. The word `user` is a reserved keyword in PostgreSQL and will cause a 500 error.
+
 <details>
 <summary>💡 Hint 1</summary>
 
@@ -68,6 +71,8 @@ For timestamps, use `@CreationTimestamp` and `@UpdateTimestamp` from Hibernate.
 - `dto/UpdateUserRequest.java`
 - `dto/UserResponse.java`
 
+> **Important:** The `UserService` currently uses getter syntax (`request.getEmail()`). When you convert the DTOs to records, you'll need to update `UserService` to use record accessor syntax (`request.email()`).
+
 ### 2.1 CreateUserRequest
 
 Create a **record** with the following fields:
@@ -76,7 +81,7 @@ Create a **record** with the following fields:
 - `lastName` (String, required, 2-50 characters)
 - `role` (String, required)
 
-Use Bean Validation annotations (`@NotBlank`, `@Email`, `@Size`).
+Use Bean Validation annotations (`@NotBlank`, `@Email`, `@Size`) with custom error messages.
 
 ```java
 // TODO: Complete this record
@@ -109,8 +114,25 @@ public record CreateUserRequest(
 Create a record that represents the API response. It should include:
 - All user fields (id, email, firstName, lastName, role, status)
 - Timestamps (createdAt, updatedAt)
+- A static `from(User user)` method to convert an entity to a response DTO
+
+> **Note:** The `UserController` uses `UserResponse.from(user)` to map entities to DTOs. Without this method, the code won't compile.
 
 **Question:** Why do we use separate DTOs for request and response?
+
+### 2.3 UpdateUserRequest
+
+Create a record for updating users. Unlike `CreateUserRequest`:
+- `email` should **not** be updatable (omit it)
+- Only include: `firstName`, `lastName`, `role`
+
+```java
+public record UpdateUserRequest(
+    // Add fields with validation annotations
+) {}
+```
+
+> **Note:** The `UserController.updateUser()` currently uses `CreateUserRequest`. Once you create `UpdateUserRequest`, update the controller to use it instead.
 
 ---
 
@@ -161,6 +183,25 @@ return ResponseEntity.created(location).body(userResponse);
 
 Handle the case where the user is not found. Return a proper 404 response.
 
+> **Note:** Don't use `if (user == null)`. Use a try-catch to catch the exception thrown by `UserService` and return 404.
+
+<details>
+<summary>💡 Hint: Try-catch approach</summary>
+
+```java
+@GetMapping("/{id}")
+public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
+    try {
+        var user = userService.getUserById(id);
+        return ResponseEntity.ok(UserResponse.from(user));
+    } catch (RuntimeException e) {
+        return ResponseEntity.notFound().build();
+    }
+}
+```
+
+</details>
+
 **Validation:** Test with Bruno or curl:
 ```bash
 # Create a user
@@ -169,6 +210,10 @@ curl -X POST http://localhost:8081/users \
   -d '{"email":"alice@dornach.com","firstName":"Alice","lastName":"Martin","role":"EMPLOYEE"}'
 
 # Should return 201 with the created user
+
+# Test 404
+curl http://localhost:8081/users/00000000-0000-0000-0000-000000000000
+# Should return 404
 ```
 
 ---
@@ -178,6 +223,8 @@ curl -X POST http://localhost:8081/users \
 **File:** `user-service/src/main/java/com/dornach/user/exception/GlobalExceptionHandler.java`
 
 Implement a global exception handler that returns errors in RFC 7807 format.
+
+> **Important:** Once you complete this exercise, you can **remove the try-catch from 3.2**. The `@RestControllerAdvice` will handle the exception globally, so your controller just needs to call `userService.getUserById(id)` and let the exception propagate.
 
 ### 4.1 Handle Validation Errors
 
@@ -219,9 +266,35 @@ public ProblemDetail handleValidationException(MethodArgumentNotValidException e
 
 </details>
 
+**Validation:** Test with invalid data:
+```bash
+curl -X POST http://localhost:8081/users \
+  -H "Content-Type: application/json" \
+  -d '{"email":"invalid","firstName":"","lastName":"","role":""}'
+# Should return 400 with RFC 7807 format and field errors
+```
+
 ### 4.2 Handle User Not Found
 
-Create a custom exception `UserNotFoundException` and handle it to return 404.
+1. Create a custom exception `UserNotFoundException` in the `exception` package
+2. Add a handler for it in `GlobalExceptionHandler` that returns 404 with RFC 7807 format
+3. Update `UserService.getUserById()` to throw `UserNotFoundException` instead of `RuntimeException`
+
+<details>
+<summary>💡 Hint: UserNotFoundException handler</summary>
+
+```java
+@ExceptionHandler(UserNotFoundException.class)
+public ProblemDetail handleUserNotFound(UserNotFoundException ex) {
+    ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+    problem.setType(URI.create("https://api.dornach.com/errors/user-not-found"));
+    problem.setTitle("User Not Found");
+    problem.setDetail(ex.getMessage());
+    return problem;
+}
+```
+
+</details>
 
 **Validation:** Test with an invalid user ID:
 ```bash
@@ -235,14 +308,48 @@ curl http://localhost:8081/users/00000000-0000-0000-0000-000000000000
 
 **File:** `user-service/src/main/resources/application.yaml`
 
+### 5.1 Enable Virtual Threads
+
 Add the configuration to enable Virtual Threads:
 
 ```yaml
 spring:
   threads:
     virtual:
-      enabled: ???  # What value?
+      enabled: true
 ```
+
+### 5.2 Verify Virtual Threads are Enabled
+
+Add a temporary endpoint in `UserController` to verify threads are virtual:
+
+```java
+@GetMapping("/debug/thread")
+public Map<String, Object> threadInfo() {
+    Thread current = Thread.currentThread();
+    return Map.of(
+        "threadName", current.getName(),
+        "isVirtual", current.isVirtual()
+    );
+}
+```
+
+Test it:
+```bash
+curl http://localhost:8081/users/debug/thread
+# Should return: {"threadName":"tomcat-handler-0","isVirtual":true}
+```
+
+> **Note:** Remove this endpoint before production!
+
+### 5.3 When are Virtual Threads Useful?
+
+| Workload Type | Virtual Threads Help? | Why |
+|---------------|----------------------|-----|
+| **I/O-bound** (HTTP calls, DB queries) | Yes | Thread waits for I/O, can handle millions of waiting threads |
+| **CPU-bound** (calculations, compression) | No | CPU is the bottleneck, not thread count |
+
+**In this training:** Virtual Threads shine in Step 2 when `order-service` calls `user-service` and `shipment-service`. Each HTTP call blocks the thread, but with Virtual Threads, thousands of concurrent requests are handled efficiently.
 
 **Question:** What is the benefit of Virtual Threads over platform threads?
 
@@ -250,6 +357,11 @@ spring:
 <summary>💡 Answer</summary>
 
 Virtual Threads are lightweight (few KB vs 1MB for platform threads). This allows handling millions of concurrent requests without the complexity of reactive programming (WebFlux).
+
+Key advantages:
+- **Simple code**: Keep using blocking I/O (no Mono/Flux)
+- **Scalability**: Handle thousands of concurrent requests
+- **No callback hell**: Sequential code that's easy to read and debug
 
 </details>
 

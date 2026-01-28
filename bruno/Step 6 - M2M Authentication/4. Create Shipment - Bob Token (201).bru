@@ -1,0 +1,37 @@
+meta {
+  name: 4. Create Shipment - Bob Token (201)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{shipment_service_url}}/shipments
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bob_token}}
+}
+
+body:json {
+  {
+    "orderId": "550e8400-e29b-41d4-a716-446655440002",
+    "recipientName": "Bob",
+    "recipientAddress": "789 Admin St"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Create shipment with Bob's H2M token (admin role).
+
+  Before running: Get Bob's token from Step 5
+
+  Expected: 201 Created - Bob has "admin" role which is allowed
+}
