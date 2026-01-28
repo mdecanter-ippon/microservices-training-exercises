@@ -42,7 +42,7 @@ public class OrderController {
 
     @PostMapping("/{id}/confirm")
     public ResponseEntity<OrderResponse> confirmOrder(@PathVariable UUID id) {
-        var order = orderService.confirmAndShipOrder(id);
+        var order = orderService.confirmOrder(id);
         return ResponseEntity.ok(OrderResponse.from(order));
     }
 }
