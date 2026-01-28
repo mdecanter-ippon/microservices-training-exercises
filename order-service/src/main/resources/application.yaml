@@ -21,28 +21,6 @@ spring:
       enabled: true
       path: /h2-console
 
-# Service URLs (Step 2)
-user:
-  service:
-    url: http://localhost:8081
-
-shipment:
-  service:
-    url: http://localhost:8082
-
-# Resilience4j (Step 2 - Exercise 3)
-# TODO: Configure retry and timeout
-# resilience4j:
-#   retry:
-#     instances:
-#       userService:
-#         maxAttempts: ???
-#         waitDuration: ???
-#   timelimiter:
-#     instances:
-#       userService:
-#         timeoutDuration: ???
-
 # Actuator
 management:
   endpoints:
@@ -66,11 +44,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-
-user:
-  service:
-    url: http://user-service:8081
-
-shipment:
-  service:
-    url: http://shipment-service:8082
