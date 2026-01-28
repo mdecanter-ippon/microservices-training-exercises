@@ -1,0 +1,31 @@
+meta {
+  name: Order Service OpenAPI
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{order_service_url}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Has OpenAPI version", function() {
+    expect(res.getBody().openapi).to.include("3.");
+  });
+
+  test("Has paths section", function() {
+    expect(res.getBody().paths).to.be.an("object");
+  });
+}
+
+docs {
+  Verify OpenAPI spec is available for order-service.
+
+  Also try in browser: http://localhost:8083/swagger-ui.html
+}

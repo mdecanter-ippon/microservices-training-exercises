@@ -1,0 +1,35 @@
+meta {
+  name: OpenAPI Spec
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{user_service_url}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("OpenAPI spec is valid", function() {
+    const body = res.getBody();
+    expect(body.openapi).to.equal("3.1.0");
+    expect(body.info.title).to.equal("Dornach User Service API");
+  });
+
+  test("Has /users paths", function() {
+    const body = res.getBody();
+    expect(body.paths).to.have.property("/users");
+    expect(body.paths).to.have.property("/users/{id}");
+  });
+}
+
+docs {
+  🔗 Direct access to user-service OpenAPI spec
+
+  Retrieves the OpenAPI 3.1 specification directly from the service.
+}

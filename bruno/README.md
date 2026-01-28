@@ -25,7 +25,7 @@ This Bruno collection contains API tests for the Dornach microservices platform.
 3. **Update the API ID**:
    - After running `setup-gateway.sh`, copy the API ID displayed
    - Open Bruno and edit the environment variable:
-     - Go to **Environments** → **Local Direct**
+     - Go to **Environments** > **Local Direct**
      - Update `api_id` with your actual API ID (e.g., `eeb818fb`)
 
 ## Structure
@@ -37,39 +37,39 @@ bruno/
 ├── environments/
 │   └── Local Direct.bru                 # Environment variables
 ├── Authentication/                      # Get JWT tokens
-│   ├── Get Token - Alice (user).bru     Get user token
-│   └── Get Token - Bob (admin).bru      Get admin token
+│   ├── Get Token - Alice (user).bru     # Get user token
+│   └── Get Token - Bob (admin).bru      # Get admin token
 ├── Authenticated Requests/              # Use JWT tokens
-│   ├── List Users (with Alice token).bru      GET with user role
-│   ├── Create User (with Bob token).bru       POST with admin role
-│   ├── List Shipments (with Alice token).bru  GET shipments
-│   └── List Orders (with Bob token).bru       GET orders
+│   ├── List Users (with Alice token).bru      # GET with user role
+│   ├── Create User (with Bob token).bru       # POST with admin role
+│   ├── List Shipments (with Alice token).bru  # GET shipments
+│   └── List Orders (with Bob token).bru       # GET orders
 ├── Gateway Tests/                       # Via API Gateway
 │   ├── User Service/
-│   │   ├── Health Check.bru             Public (200)
-│   │   ├── OpenAPI Spec.bru             Public (200)
-│   │   └── List Users (requires JWT).bru Protected (401)
+│   │   ├── Health Check.bru             # Public (200)
+│   │   ├── OpenAPI Spec.bru             # Public (200)
+│   │   └── List Users (requires JWT).bru # Protected (401)
 │   ├── Shipment Service/
-│   │   ├── Health Check.bru             Public (200)
-│   │   ├── OpenAPI Spec.bru             Public (200)
-│   │   └── List Shipments (requires JWT).bru Protected (401)
+│   │   ├── Health Check.bru             # Public (200)
+│   │   ├── OpenAPI Spec.bru             # Public (200)
+│   │   └── List Shipments (requires JWT).bru # Protected (401)
 │   └── Order Service/
-│       ├── Health Check.bru             Public (200)
-│       ├── OpenAPI Spec.bru             Public (200)
-│       └── List Orders (requires JWT).bru Protected (401)
+│       ├── Health Check.bru             # Public (200)
+│       ├── OpenAPI Spec.bru             # Public (200)
+│       └── List Orders (requires JWT).bru # Protected (401)
 └── Direct Access/                       # Direct to services
     ├── User Service/
-    │   ├── Health Check.bru             Public (200)
-    │   ├── OpenAPI Spec.bru             Public (200)
-    │   └── List Users (requires JWT).bru Protected (401)
+    │   ├── Health Check.bru             # Public (200)
+    │   ├── OpenAPI Spec.bru             # Public (200)
+    │   └── List Users (requires JWT).bru # Protected (401)
     ├── Shipment Service/
-    │   ├── Health Check.bru             Public (200)
-    │   ├── OpenAPI Spec.bru             Public (200)
-    │   └── List Shipments (requires JWT).bru Protected (401)
+    │   ├── Health Check.bru             # Public (200)
+    │   ├── OpenAPI Spec.bru             # Public (200)
+    │   └── List Shipments (requires JWT).bru # Protected (401)
     └── Order Service/
-        ├── Health Check.bru             Public (200)
-        ├── OpenAPI Spec.bru             Public (200)
-        └── List Orders (requires JWT).bru Protected (401)
+        ├── Health Check.bru             # Public (200)
+        ├── OpenAPI Spec.bru             # Public (200)
+        └── List Orders (requires JWT).bru # Protected (401)
 ```
 
 ## Testing Approaches
