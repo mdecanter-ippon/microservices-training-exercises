@@ -1,0 +1,29 @@
+meta {
+  name: List Users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{user_service_url}}/users
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  List all users in the system.
+
+  At Step 1, no authentication is required.
+
+  Expected: 200 OK with array of users (may be empty initially)
+}

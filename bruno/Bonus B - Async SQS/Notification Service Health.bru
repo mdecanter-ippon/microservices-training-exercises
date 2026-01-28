@@ -1,0 +1,38 @@
+meta {
+  name: 3. Notification Service Health
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8084/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Service is UP", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal('UP');
+  });
+}
+
+docs {
+  # Notification Service Health Check
+
+  Verifies that the notification-service is running and healthy.
+
+  **Expected Response:**
+  ```json
+  {
+    "status": "UP"
+  }
+  ```
+
+  **Note:** This service has no REST endpoints for business logic.
+  It's a pure SQS consumer that processes order events asynchronously.
+}

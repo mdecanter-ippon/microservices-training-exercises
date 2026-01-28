@@ -1,0 +1,46 @@
+meta {
+  name: Create User
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{user_service_url}}/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "alice@dornach.com",
+    "firstName": "Alice",
+    "lastName": "Martin",
+    "role": "EMPLOYEE"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Response has user ID", function() {
+    expect(res.getBody().id).to.be.a("string");
+  });
+
+  test("Response has correct email", function() {
+    expect(res.getBody().email).to.equal("alice@dornach.com");
+  });
+
+  test("Has Location header", function() {
+    expect(res.getHeaders()["location"]).to.include("/users/");
+  });
+}
+
+docs {
+  Create a new user.
+
+  Tests Exercise 3.1 - POST /users should return 201 with Location header.
+
+  Expected: 201 Created with user data and Location header
+}

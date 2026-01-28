@@ -1,0 +1,38 @@
+meta {
+  name: 5. Create User - With Token
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{user_service_url}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bob_token}}
+}
+
+body:json {
+  {
+    "email": "charlie@dornach.com",
+    "firstName": "Charlie",
+    "lastName": "Brown",
+    "role": "EMPLOYEE"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Create a user with valid JWT token.
+
+  Before running: Get a token first (run "2. Get Token - Bob")
+
+  Expected: 201 Created
+}

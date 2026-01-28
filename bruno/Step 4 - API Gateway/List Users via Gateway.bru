@@ -1,0 +1,34 @@
+meta {
+  name: List Users via Gateway
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{gateway}}/users
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  List users via API Gateway.
+
+  Compares with direct call to verify gateway routing works.
+
+  Before running:
+  1. LocalStack must be running: docker-compose up -d localstack
+  2. Gateway must be created: ./infra/setup-gateway.sh
+  3. Update api_id in environment with the value from setup script
+
+  Expected: Same response as direct call to user-service
+}

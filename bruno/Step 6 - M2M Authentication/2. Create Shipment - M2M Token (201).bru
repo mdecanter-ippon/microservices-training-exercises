@@ -1,0 +1,37 @@
+meta {
+  name: 2. Create Shipment - M2M Token (201)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{shipment_service_url}}/shipments
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{m2m_token}}
+}
+
+body:json {
+  {
+    "orderId": "550e8400-e29b-41d4-a716-446655440000",
+    "recipientName": "Test User",
+    "recipientAddress": "123 Main St"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Create shipment with M2M token (service-caller role).
+
+  Before running: Get M2M token first
+
+  Expected: 201 Created - M2M token has service-caller role which is allowed
+}
