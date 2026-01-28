@@ -21,46 +21,50 @@ By the end of this exercise, you will:
 ## Prerequisites
 
 - Step 1 completed (user-service working)
-- Both services running: user-service (8081) and order-service (8083)
+- All three services available: user-service (8081), shipment-service (8082), order-service (8083)
 - Basic understanding of HTTP clients and dependency injection
 
 ---
 
 ## Context
 
-The **order-service** needs to validate that a user exists before creating an order. This requires calling the **user-service**.
+The **order-service** needs to communicate with other services:
+- **user-service** → Validate that the user exists before creating an order
+- **shipment-service** → Create a shipment when confirming an order
 
 ```
-┌─────────────┐      ┌───────────────┐      ┌──────────────┐
-│   Client    │ ──── │ order-service │ ──── │ user-service │
-└─────────────┘      └───────────────┘      └──────────────┘
-                      POST /orders            GET /users/{id}
+                                          ┌──────────────┐
+                                    ┌───▶ │ user-service │
+                                    │     └──────────────┘
+┌─────────┐      ┌───────────────┐  │
+│ Client  │ ───▶ │ order-service │ ─┤
+└─────────┘      └───────────────┘  │
+                                    │     ┌─────────────────┐
+                                    └───▶ │ shipment-service│
+                                          └─────────────────┘
 ```
 
-**Current problem:** Anyone can create an order with any `userId`. We need to validate that the user actually exists in user-service.
+**Current problems:**
+1. Anyone can create an order with any `userId` - we need to validate the user exists
+2. The `/confirm` endpoint doesn't actually create a shipment - we need to call shipment-service
 
 ---
 
 ## Exercise 1: Configure RestClient
 
-We need a `RestClient` bean configured to call user-service.
+We need `RestClient` beans to call user-service and shipment-service.
 
 ### 1.1 Create the Configuration Class
 
-Create a new file: `order-service/src/main/java/com/dornach/order/config/RestClientConfig.java`
+Create: `order-service/src/main/java/com/dornach/order/config/RestClientConfig.java`
 
 You need to:
 1. Create a `@Configuration` class
-2. Inject the user-service URL from configuration using `@Value`
-3. Create a `@Bean` method that returns a configured `RestClient`
-
-**Think about:**
-- How do you inject a property value in Spring?
-- What's the builder pattern for RestClient?
-- Why should you use the injected `RestClient.Builder` instead of `RestClient.builder()`?
+2. Inject URLs for both services using `@Value`
+3. Create two `@Bean` methods: `userRestClient` and `shipmentRestClient`
 
 <details>
-<summary>💡 Hint 1: Class structure</summary>
+<summary>💡 Hint: Class structure</summary>
 
 ```java
 @Configuration
@@ -69,22 +73,20 @@ public class RestClientConfig {
     @Value("${user.service.url}")
     private String userServiceUrl;
 
+    @Value("${shipment.service.url}")
+    private String shipmentServiceUrl;
+
     @Bean
     public RestClient userRestClient(RestClient.Builder builder) {
-        // TODO: configure and return the RestClient
+        // TODO
+    }
+
+    @Bean
+    public RestClient shipmentRestClient(RestClient.Builder builder) {
+        // TODO
     }
 }
 ```
-
-</details>
-
-<details>
-<summary>💡 Hint 2: RestClient Builder</summary>
-
-The `RestClient.Builder` provides fluent methods:
-- `.baseUrl(url)` - sets the base URL for all requests
-- `.defaultHeader(name, value)` - adds default headers to all requests
-- `.build()` - creates the RestClient instance
 
 </details>
 
@@ -107,10 +109,21 @@ public class RestClientConfig {
     @Value("${user.service.url}")
     private String userServiceUrl;
 
+    @Value("${shipment.service.url}")
+    private String shipmentServiceUrl;
+
     @Bean
     public RestClient userRestClient(RestClient.Builder builder) {
         return builder
             .baseUrl(userServiceUrl)
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .build();
+    }
+
+    @Bean
+    public RestClient shipmentRestClient(RestClient.Builder builder) {
+        return builder
+            .baseUrl(shipmentServiceUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .build();
     }
@@ -121,7 +134,7 @@ public class RestClientConfig {
 
 </details>
 
-### 1.2 Add the Configuration Property
+### 1.2 Add Configuration Properties
 
 Add to `order-service/src/main/resources/application.yaml`:
 
@@ -129,13 +142,17 @@ Add to `order-service/src/main/resources/application.yaml`:
 user:
   service:
     url: http://localhost:8081
+
+shipment:
+  service:
+    url: http://localhost:8082
 ```
 
 **Verify:** Start order-service. If it starts without errors, the configuration is correct.
 
 ---
 
-## Exercise 2: Create the UserClient
+## Exercise 2: Create UserClient
 
 We'll use an interface + implementation pattern for better testability.
 
@@ -180,54 +197,21 @@ Create: `order-service/src/main/java/com/dornach/order/client/UserClientImpl.jav
 
 Implement the interface:
 1. Make it a Spring `@Component`
-2. Inject the `userRestClient` bean (use `@Qualifier` to specify which RestClient)
+2. Inject `userRestClient` (use `@Qualifier`)
 3. Implement `getUserById()` using RestClient's fluent API
-
-**Think about:**
-- What HTTP method do you use to fetch a resource?
-- How do you include the userId in the URL path?
-- What happens if user-service returns 404? How should you handle it?
+4. Handle 404 errors by throwing a `RuntimeException`
 
 <details>
-<summary>💡 Hint 1: Constructor injection with Qualifier</summary>
-
-```java
-@Component
-public class UserClientImpl implements UserClient {
-
-    private final RestClient restClient;
-
-    public UserClientImpl(@Qualifier("userRestClient") RestClient restClient) {
-        this.restClient = restClient;
-    }
-}
-```
-
-`@Qualifier` is needed because there could be multiple `RestClient` beans (one per service).
-
-</details>
-
-<details>
-<summary>💡 Hint 2: Making a GET request</summary>
+<summary>💡 Hint: RestClient GET request</summary>
 
 ```java
 restClient.get()
-    .uri("/users/{id}", userId)  // {id} is replaced with userId
+    .uri("/users/{id}", userId)
     .retrieve()
-    .body(UserResponse.class);   // Deserialize JSON to UserResponse
-```
-
-</details>
-
-<details>
-<summary>💡 Hint 3: Handling 404 errors</summary>
-
-Use `.onStatus()` to handle specific HTTP status codes before calling `.body()`:
-
-```java
-.onStatus(status -> status.value() == 404, (request, response) -> {
-    throw new RuntimeException("User not found: " + userId);
-})
+    .onStatus(status -> status.value() == 404, (req, res) -> {
+        throw new RuntimeException("User not found: " + userId);
+    })
+    .body(UserResponse.class);
 ```
 
 </details>
@@ -275,18 +259,22 @@ public class UserClientImpl implements UserClient {
 
 ---
 
-## Exercise 3: Integrate into OrderService
-
-Now use the `UserClient` in `OrderService` to validate users before creating orders.
+## Exercise 3: Integrate UserClient into OrderService
 
 ### 3.1 Inject UserClient
 
 Modify `OrderService.java`:
 1. Add `UserClient` as a field
-2. Add it to the constructor parameters
+2. Add it to the constructor
+
+### 3.2 Validate User in createOrder
+
+Update `createOrder()` to:
+1. Call `userClient.getUserById()` before creating the order
+2. Log the user's name to verify it worked
 
 <details>
-<summary>💡 Hint</summary>
+<summary>✅ Solution</summary>
 
 ```java
 private final OrderRepository orderRepository;
@@ -296,31 +284,14 @@ public OrderService(OrderRepository orderRepository, UserClient userClient) {
     this.orderRepository = orderRepository;
     this.userClient = userClient;
 }
-```
 
-</details>
-
-### 3.2 Validate User in createOrder
-
-Update the `createOrder()` method to:
-1. Call `userClient.getUserById()` with the request's userId
-2. Log the user's name to verify it worked
-3. Continue with order creation only if the user exists
-
-**Think about:** What happens if `getUserById()` throws an exception? Does the order get created?
-
-<details>
-<summary>✅ Solution</summary>
-
-```java
 public Order createOrder(CreateOrderRequest request) {
     log.info("Creating order for user: " + request.userId());
 
-    // Validate user exists (throws exception if not found)
+    // Validate user exists
     UserResponse user = userClient.getUserById(request.userId());
     log.info("User validated: " + user.firstName() + " " + user.lastName());
 
-    // Create order only if user validation passed
     Order order = new Order(
             request.userId(),
             request.productName(),
@@ -335,74 +306,247 @@ public Order createOrder(CreateOrderRequest request) {
 
 </details>
 
-### 3.3 Test It!
+### 3.3 Test It
 
-**Terminal 1:** Start user-service
+Start user-service and order-service, then:
+
 ```bash
-cd user-service && mvn spring-boot:run
-```
-
-**Terminal 2:** Start order-service
-```bash
-cd order-service && mvn spring-boot:run
-```
-
-**Terminal 3:** Test the flow
-
-First, create a user and save the returned ID:
-```bash
+# Create a user first
 curl -X POST http://localhost:8081/users \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","firstName":"Test","lastName":"User","role":"EMPLOYEE"}'
-```
 
-Then create an order with that user ID:
-```bash
+# Create an order with the returned user ID
 curl -X POST http://localhost:8083/orders \
   -H "Content-Type: application/json" \
-  -d '{
-    "userId": "PASTE_USER_ID_HERE",
-    "productName": "Laptop",
-    "quantity": 1,
-    "totalPrice": 999.99,
-    "shippingAddress": "123 Main St"
-  }'
+  -d '{"userId":"PASTE_USER_ID","productName":"Laptop","quantity":1,"totalPrice":999.99,"shippingAddress":"123 Main St"}'
 ```
 
-✅ Check order-service logs - you should see: `User validated: Test User`
-
-**Test with invalid user:**
-```bash
-curl -X POST http://localhost:8083/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "00000000-0000-0000-0000-000000000000",
-    "productName": "Laptop",
-    "quantity": 1,
-    "totalPrice": 999.99,
-    "shippingAddress": "123 Main St"
-  }'
-```
-
-✅ This should return an error (500 with "User not found")
+✅ Check logs: `User validated: Test User`
 
 ---
 
-## Exercise 4: Add Resilience with Retry
+## Exercise 4: Create ShipmentClient
 
-Network calls can fail temporarily. Let's add automatic retry using Resilience4j.
+Apply the same pattern to call shipment-service.
 
-### 4.1 Verify Dependency
+### 4.1 Create DTOs
 
-Check that `order-service/pom.xml` has:
-```xml
-<dependency>
-    <groupId>io.github.resilience4j</groupId>
-    <artifactId>resilience4j-spring-boot3</artifactId>
-</dependency>
+Create the request/response DTOs in `order-service/src/main/java/com/dornach/order/client/`:
+
+**ShipmentRequest.java:**
+```java
+package com.dornach.order.client;
+
+import java.util.UUID;
+
+public record ShipmentRequest(
+    UUID orderId,
+    String recipientName,
+    String shippingAddress
+) {}
 ```
 
-### 4.2 Configure Retry
+**ShipmentResponse.java:**
+```java
+package com.dornach.order.client;
+
+import java.util.UUID;
+
+public record ShipmentResponse(
+    UUID id,
+    String trackingNumber,
+    UUID orderId,
+    String status
+) {}
+```
+
+### 4.2 Create the Interface
+
+Create: `order-service/src/main/java/com/dornach/order/client/ShipmentClient.java`
+
+```java
+public interface ShipmentClient {
+    ShipmentResponse createShipment(ShipmentRequest request);
+}
+```
+
+### 4.3 Implement the Client
+
+Create: `order-service/src/main/java/com/dornach/order/client/ShipmentClientImpl.java`
+
+Similar to UserClient, but:
+- Use `shipmentRestClient` (different `@Qualifier`)
+- Make a POST request to `/shipments`
+- Send the request body
+
+<details>
+<summary>💡 Hint: RestClient POST request</summary>
+
+```java
+restClient.post()
+    .uri("/shipments")
+    .body(request)
+    .retrieve()
+    .body(ShipmentResponse.class);
+```
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+```java
+package com.dornach.order.client;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+import java.util.logging.Logger;
+
+@Component
+public class ShipmentClientImpl implements ShipmentClient {
+
+    private static final Logger log = Logger.getLogger(ShipmentClientImpl.class.getName());
+    private final RestClient restClient;
+
+    public ShipmentClientImpl(@Qualifier("shipmentRestClient") RestClient restClient) {
+        this.restClient = restClient;
+    }
+
+    @Override
+    public ShipmentResponse createShipment(ShipmentRequest request) {
+        log.info("Creating shipment for order: " + request.orderId());
+
+        return restClient.post()
+            .uri("/shipments")
+            .body(request)
+            .retrieve()
+            .body(ShipmentResponse.class);
+    }
+}
+```
+
+</details>
+
+---
+
+## Exercise 5: Integrate ShipmentClient into OrderService
+
+### 5.1 Create ConfirmOrderRequest DTO
+
+Create: `order-service/src/main/java/com/dornach/order/dto/ConfirmOrderRequest.java`
+
+```java
+package com.dornach.order.dto;
+
+import jakarta.validation.constraints.NotBlank;
+
+public record ConfirmOrderRequest(
+    @NotBlank(message = "Recipient name is required")
+    String recipientName
+) {}
+```
+
+### 5.2 Update OrderService
+
+1. Inject `ShipmentClient`
+2. Replace `confirmOrder()` with `confirmAndShipOrder(UUID orderId, String recipientName)`:
+   - Find the order
+   - Mark as CONFIRMED
+   - Call shipment-service
+   - Update order with tracking number
+   - Mark as SHIPPED
+
+<details>
+<summary>✅ Solution</summary>
+
+```java
+private final OrderRepository orderRepository;
+private final UserClient userClient;
+private final ShipmentClient shipmentClient;
+
+public OrderService(OrderRepository orderRepository, UserClient userClient, ShipmentClient shipmentClient) {
+    this.orderRepository = orderRepository;
+    this.userClient = userClient;
+    this.shipmentClient = shipmentClient;
+}
+
+public Order confirmAndShipOrder(UUID orderId, String recipientName) {
+    log.info("Confirming and shipping order: " + orderId);
+
+    Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+    if (order.getStatus() != OrderStatus.PENDING) {
+        throw new IllegalStateException("Order is not in PENDING status");
+    }
+
+    order.setStatus(OrderStatus.CONFIRMED);
+
+    // Call shipment-service
+    ShipmentRequest shipmentRequest = new ShipmentRequest(
+            order.getId(),
+            recipientName,
+            order.getShippingAddress()
+    );
+    ShipmentResponse shipment = shipmentClient.createShipment(shipmentRequest);
+    log.info("Shipment created with tracking: " + shipment.trackingNumber());
+
+    order.setTrackingNumber(shipment.trackingNumber());
+    order.setStatus(OrderStatus.SHIPPED);
+
+    return orderRepository.save(order);
+}
+```
+
+</details>
+
+### 5.3 Update OrderController
+
+Update the `/confirm` endpoint to accept a body and call the new method:
+
+```java
+@PostMapping("/{id}/confirm")
+public ResponseEntity<OrderResponse> confirmOrder(
+        @PathVariable UUID id,
+        @Valid @RequestBody ConfirmOrderRequest request) {
+    var order = orderService.confirmAndShipOrder(id, request.recipientName());
+    return ResponseEntity.ok(OrderResponse.from(order));
+}
+```
+
+### 5.4 Test It
+
+Start all three services, then:
+
+```bash
+# Create a user
+curl -X POST http://localhost:8081/users \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","firstName":"Test","lastName":"User","role":"EMPLOYEE"}'
+
+# Create an order
+curl -X POST http://localhost:8083/orders \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"USER_ID","productName":"Laptop","quantity":1,"totalPrice":999.99,"shippingAddress":"123 Main St"}'
+
+# Confirm the order (creates shipment)
+curl -X POST http://localhost:8083/orders/ORDER_ID/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"recipientName":"Test User"}'
+```
+
+✅ Check logs: `Shipment created with tracking: TRACK-XXXX`
+
+---
+
+## Exercise 6: Add Resilience
+
+Network calls can fail. Add retry and timeout using Resilience4j.
+
+### 6.1 Configure Resilience4j
 
 Add to `application.yaml`:
 
@@ -413,19 +557,20 @@ resilience4j:
       userService:
         maxAttempts: 3
         waitDuration: 500ms
+      shipmentService:
+        maxAttempts: 3
+        waitDuration: 500ms
+  timelimiter:
+    instances:
+      userService:
+        timeoutDuration: 2s
+      shipmentService:
+        timeoutDuration: 2s
 ```
 
-This means: if a call fails, retry up to 3 times, waiting 500ms between attempts.
+### 6.2 Apply to Clients
 
-### 4.3 Apply Retry to the Client
-
-Update `UserClientImpl.getUserById()`:
-
-1. Add the `@Retry` annotation with the instance name
-2. Create a fallback method that's called when all retries fail
-
-<details>
-<summary>💡 Hint</summary>
+Add `@Retry` annotation to both client implementations:
 
 ```java
 @Override
@@ -435,49 +580,22 @@ public UserResponse getUserById(UUID userId) {
 }
 
 private UserResponse getUserByIdFallback(UUID userId, Exception ex) {
-    log.severe("Failed to fetch user " + userId + " after retries: " + ex.getMessage());
+    log.severe("User service unavailable: " + ex.getMessage());
     throw new RuntimeException("User service is unavailable");
 }
 ```
 
-**Important:** The fallback method must have:
-- Same return type
-- Same parameters + an `Exception` parameter at the end
+Do the same for `ShipmentClientImpl` with `name = "shipmentService"`.
 
-</details>
+### 6.3 Test Retry
 
-### 4.4 Test Retry
-
-1. Start both services
-2. Create an order (should work)
-3. **Stop user-service** (Ctrl+C)
-4. Try to create another order
-5. Watch order-service logs - you'll see 3 retry attempts
-6. After retries fail, the fallback is called
+1. Stop user-service
+2. Try to create an order
+3. Watch order-service logs - you'll see retry attempts
 
 ---
 
-## Exercise 5: Add Timeout
-
-Prevent requests from hanging forever if user-service is slow.
-
-Add to `application.yaml`:
-
-```yaml
-resilience4j:
-  timelimiter:
-    instances:
-      userService:
-        timeoutDuration: 2s
-```
-
-**Test it:** Add `Thread.sleep(5000);` in user-service's `UserController.getUserById()`, then try to create an order. It should fail after 2 seconds.
-
----
-
-## Exercise 6: Integration Test with Mock
-
-Write a test that mocks `UserClient` so we don't need user-service running.
+## Exercise 7: Integration Test
 
 Create: `order-service/src/test/java/com/dornach/order/controller/OrderControllerIntegrationTest.java`
 
@@ -492,45 +610,8 @@ class OrderControllerIntegrationTest {
     @MockitoBean
     private UserClient userClient;
 
-    @Test
-    void createOrder_ValidUser_ReturnsCreated() throws Exception {
-        // TODO: Configure mock and test POST /orders
-    }
-}
-```
-
-<details>
-<summary>✅ Solution</summary>
-
-```java
-package com.dornach.order.controller;
-
-import com.dornach.order.client.UserClient;
-import com.dornach.order.dto.UserResponse;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@SpringBootTest
-@AutoConfigureMockMvc
-class OrderControllerIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
     @MockitoBean
-    private UserClient userClient;
+    private ShipmentClient shipmentClient;
 
     @Test
     void createOrder_ValidUser_ReturnsCreated() throws Exception {
@@ -552,28 +633,10 @@ class OrderControllerIntegrationTest {
                     }
                     """))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.productName").value("Laptop"))
             .andExpect(jsonPath("$.status").value("PENDING"));
     }
 }
 ```
-
-</details>
-
----
-
-## Challenge: ShipmentClient (Optional)
-
-Apply the same pattern to create a `ShipmentClient` for calling shipment-service:
-
-1. Add `shipmentRestClient` bean in `RestClientConfig`
-2. Create `ShipmentClient` interface
-3. Create `ShipmentClientImpl` with RestClient
-4. Add retry/timeout configuration for `shipmentService`
-5. Create `confirmAndShipOrder()` in `OrderService` that:
-   - Confirms the order
-   - Calls shipment-service to create a shipment
-   - Updates the order with the tracking number
 
 ---
 
@@ -581,13 +644,12 @@ Apply the same pattern to create a `ShipmentClient` for calling shipment-service
 
 Before moving to Step 3, verify:
 
-- [ ] `RestClientConfig` creates a configured `userRestClient` bean
-- [ ] `UserClient` interface defines `getUserById(UUID)`
-- [ ] `UserClientImpl` calls user-service via RestClient
-- [ ] `POST /orders` validates user exists before creating order
-- [ ] Logs show "User validated: {name}" on successful order creation
-- [ ] Invalid userId returns an error (user not found)
-- [ ] Retry works: stop user-service, see retry attempts in logs
+- [ ] `RestClientConfig` creates both `userRestClient` and `shipmentRestClient`
+- [ ] `UserClient` validates users on order creation
+- [ ] `ShipmentClient` creates shipments on order confirmation
+- [ ] `POST /orders` validates user exists first
+- [ ] `POST /orders/{id}/confirm` creates a shipment and returns tracking number
+- [ ] Retry works: stop a service, see retry attempts in logs
 - [ ] Tests pass: `mvn test`
 
 ---
@@ -598,7 +660,7 @@ In this step, you learned:
 - **RestClient** (Spring 6) provides a modern, fluent API for HTTP calls
 - **Interface-based clients** improve testability and decoupling
 - **Resilience4j** adds retry and timeout to handle network failures
-- **Service orchestration** coordinates calls between microservices
+- **Service orchestration** coordinates calls between multiple services
 
 ---
 
