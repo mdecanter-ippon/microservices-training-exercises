@@ -1,0 +1,41 @@
+meta {
+  name: 1. Get M2M Token
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloak_url}}/realms/dornach/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  client_id: order-service-client
+  client_secret: order-service-secret
+  grant_type: client_credentials
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("m2m_token", res.getBody().access_token);
+  }
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has access_token", function() {
+    expect(res.getBody().access_token).to.be.a("string");
+  });
+}
+
+docs {
+  Get M2M token using Client Credentials flow.
+
+  Note: No username/password - the service authenticates with client_id and client_secret.
+
+  The token is saved to m2m_token environment variable.
+}

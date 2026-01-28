@@ -1,0 +1,68 @@
+meta {
+  name: 1. Create Order (PENDING)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bob_token}}
+}
+
+body:json {
+  {
+    "userId": "{{alice_user_id}}",
+    "productName": "Wireless Headphones",
+    "quantity": 1,
+    "totalPrice": 149.99,
+    "shippingAddress": "456 Oak Avenue, Suite 789, New York, NY 10001"
+  }
+}
+
+script:post-response {
+  // Store order ID for use in the confirm step
+  if (res.getStatus() === 201) {
+    const body = res.getBody();
+    bru.setVar("order_id", body.id);
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Order has ID and status PENDING", function() {
+    const body = res.getBody();
+    expect(body.id).to.be.a('string');
+    expect(body.status).to.equal('PENDING');
+  });
+
+  test("No tracking number yet", function() {
+    const body = res.getBody();
+    expect(body.trackingNumber).to.be.null;
+  });
+}
+
+docs {
+  # Step 1: Create Order (PENDING)
+
+  This is the **first step** of the two-step order flow.
+
+  The order is created in **PENDING** status and must be confirmed separately.
+
+  **What happens:**
+  1. User validation via user-service (synchronous)
+  2. Order saved with PENDING status
+  3. Order ID stored in `order_id` variable for the confirm step
+
+  **Note:** The SQS event is NOT published at this step.
+  The event is published when the order is confirmed (Step 2).
+
+  **Next:** Run "2. Confirm Order (triggers SQS)" to confirm and ship the order.
+}

@@ -1,0 +1,36 @@
+meta {
+  name: Create Order - Invalid User
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "userId": "00000000-0000-0000-0000-000000000000",
+    "productName": "Laptop",
+    "quantity": 1,
+    "totalPrice": 999.99,
+    "shippingAddress": "123 Main St"
+  }
+}
+
+tests {
+  test("Status is 404 Not Found", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}
+
+docs {
+  Test order creation with non-existent user.
+
+  This demonstrates that order-service validates the user via user-service
+  before creating the order.
+
+  Expected: 404 Not Found (user does not exist)
+}

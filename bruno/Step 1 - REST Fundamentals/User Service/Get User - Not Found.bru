@@ -1,0 +1,31 @@
+meta {
+  name: Get User - Not Found
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{user_service_url}}/users/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Response is RFC 7807 format", function() {
+    expect(res.getBody().type).to.be.a("string");
+    expect(res.getBody().title).to.be.a("string");
+    expect(res.getBody().status).to.equal(404);
+  });
+}
+
+docs {
+  Test 404 handling for non-existent user.
+
+  Tests Exercise 4.2 - UserNotFoundException should return RFC 7807 format.
+
+  Expected: 404 Not Found with ProblemDetail response
+}

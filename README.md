@@ -25,7 +25,8 @@ microservices-training-starter/
 │   ├── STEP_6_M2M_AUTHENTICATION.md
 │   ├── STEP_7_DISTRIBUTED_TRACING.md
 │   ├── BONUS_A_TESTCONTAINERS.md
-│   └── BONUS_B_ASYNC_SQS.md
+│   ├── BONUS_B_ASYNC_SQS.md
+│   └── BONUS_C_MAPSTRUCT.md
 ├── user-service/               # User management service (port 8081)
 ├── order-service/              # Order management service (port 8083)
 ├── shipment-service/           # Shipment tracking service (port 8082)
@@ -49,15 +50,20 @@ mvn clean compile
 
 ### 2. Start Infrastructure
 
-```bash
-# Start PostgreSQL (for later steps)
-docker-compose up -d postgres
+> **Note:** Steps 1-3 use H2 in-memory database by default. No infrastructure is required until Step 4.
 
-# For Step 4+: Start LocalStack
+```bash
+# Step 4+: Start LocalStack (API Gateway)
 docker-compose up -d localstack
 
-# For Step 5+: Start Keycloak
+# Step 5+: Start Keycloak (Authentication)
 docker-compose up -d keycloak
+
+# Step 7: Start Zipkin (Distributed Tracing)
+docker-compose up -d zipkin
+
+# Optional: PostgreSQL (only needed for Docker profile)
+docker-compose up -d postgres
 ```
 
 ### 3. Run a Service
@@ -85,6 +91,7 @@ Start with **Step 1**: Open `exercises/STEP_1_REST_FUNDAMENTALS.md` and follow t
 | 7 | Distributed Tracing | 45-60 min |
 | Bonus A | Testcontainers | 30-45 min |
 | Bonus B | Async SQS | 45-60 min |
+| Bonus C | MapStruct | 30-45 min |
 
 ## If You Get Stuck
 
@@ -106,6 +113,7 @@ Available checkpoints:
 - `step-7-complete`
 - `bonus-a-complete`
 - `bonus-b-complete`
+- `bonus-c-complete`
 
 ## Testing with Bruno
 

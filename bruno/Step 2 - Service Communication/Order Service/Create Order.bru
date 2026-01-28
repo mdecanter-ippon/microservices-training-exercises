@@ -1,0 +1,48 @@
+meta {
+  name: Create Order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{order_service_url}}/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "userId": "{{user_id}}",
+    "productName": "Laptop",
+    "quantity": 1,
+    "totalPrice": 999.99,
+    "shippingAddress": "123 Main St"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Order has ID", function() {
+    expect(res.getBody().id).to.be.a("string");
+  });
+
+  test("Order status is PENDING", function() {
+    expect(res.getBody().status).to.equal("PENDING");
+  });
+}
+
+docs {
+  Create a new order.
+
+  This request triggers order-service to call user-service to validate the user exists.
+  Check order-service logs for "User validated: {name}" message.
+
+  Before running:
+  1. user-service must be running
+  2. A user with the user_id must exist (create one in Step 1 first)
+
+  Expected: 201 Created with order data
+}

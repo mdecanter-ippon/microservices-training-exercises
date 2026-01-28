@@ -1,0 +1,24 @@
+meta {
+  name: Unknown Route - 404
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{gateway}}/unknown
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 404 Not Found", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}
+
+docs {
+  Test unknown route returns 404.
+
+  The gateway only routes /users/*, /orders/*, /shipments/*.
+  Any other path should return 404.
+}
