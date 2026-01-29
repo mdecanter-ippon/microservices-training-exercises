@@ -71,37 +71,37 @@ public class OpenApiConfig {
             // Add global error responses
             openApi.getComponents()
                     .addResponses("BadRequest", createErrorResponse(
-                            "Bad Request",
+                            "Bad Request", 400,
                             "The request is invalid or malformed"
                     ))
                     .addResponses("Unauthorized", createErrorResponse(
-                            "Unauthorized",
+                            "Unauthorized", 401,
                             "Authentication is required"
                     ))
                     .addResponses("Forbidden", createErrorResponse(
-                            "Forbidden",
+                            "Forbidden", 403,
                             "You don't have permission to access this resource"
                     ))
                     .addResponses("NotFound", createErrorResponse(
-                            "Not Found",
+                            "Not Found", 404,
                             "The requested resource was not found"
                     ))
                     .addResponses("Conflict", createErrorResponse(
-                            "Conflict",
+                            "Conflict", 409,
                             "The request conflicts with the current state (e.g., duplicate email)"
                     ))
                     .addResponses("InternalServerError", createErrorResponse(
-                            "Internal Server Error",
+                            "Internal Server Error", 500,
                             "An unexpected error occurred"
                     ));
         };
     }
 
-    private ApiResponse createErrorResponse(String title, String description) {
+    private ApiResponse createErrorResponse(String title, int status, String description) {
         Map<String, Object> errorExample = new LinkedHashMap<>();
         errorExample.put("type", "https://api.dornach.com/errors/error-type");
         errorExample.put("title", title);
-        errorExample.put("status", 400);
+        errorExample.put("status", status);
         errorExample.put("detail", "Detailed error message");
         errorExample.put("timestamp", "2024-01-15T10:30:00Z");
 
