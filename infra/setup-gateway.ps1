@@ -58,9 +58,10 @@ Write-Host "Creating integrations for each service..." -ForegroundColor Cyan
 $USER_INT = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-integration `
     --api-id $API_ID `
     --integration-type HTTP_PROXY `
-    --integration-uri "http://host.docker.internal:8081/{proxy}" `
+    --integration-uri "http://host.docker.internal:8081/users" `
     --integration-method ANY `
     --payload-format-version 1.0 `
+    --request-parameters 'overwrite:path=$request.path' `
     --query 'IntegrationId' --output text
 
 Write-Host "  [OK] user-service integration: $USER_INT" -ForegroundColor Green
@@ -69,9 +70,10 @@ Write-Host "  [OK] user-service integration: $USER_INT" -ForegroundColor Green
 $SHIPMENT_INT = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-integration `
     --api-id $API_ID `
     --integration-type HTTP_PROXY `
-    --integration-uri "http://host.docker.internal:8082/{proxy}" `
+    --integration-uri "http://host.docker.internal:8082/shipments" `
     --integration-method ANY `
     --payload-format-version 1.0 `
+    --request-parameters 'overwrite:path=$request.path' `
     --query 'IntegrationId' --output text
 
 Write-Host "  [OK] shipment-service integration: $SHIPMENT_INT" -ForegroundColor Green
@@ -80,9 +82,10 @@ Write-Host "  [OK] shipment-service integration: $SHIPMENT_INT" -ForegroundColor
 $ORDER_INT = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-integration `
     --api-id $API_ID `
     --integration-type HTTP_PROXY `
-    --integration-uri "http://host.docker.internal:8083/{proxy}" `
+    --integration-uri "http://host.docker.internal:8083/orders" `
     --integration-method ANY `
     --payload-format-version 1.0 `
+    --request-parameters 'overwrite:path=$request.path' `
     --query 'IntegrationId' --output text
 
 Write-Host "  [OK] order-service integration: $ORDER_INT" -ForegroundColor Green
@@ -145,6 +148,14 @@ Write-Host "  [INFO] Rate limiting configuration requires additional setup in Lo
 
 # Get the Gateway URL
 $GATEWAY_URL = "$LOCALSTACK_ENDPOINT/restapis/$API_ID/prod/_user_request_"
+
+# Update Bruno environment with new API ID
+$BRUNO_ENV = "..\bruno\environments\Direct.bru"
+if (Test-Path $BRUNO_ENV) {
+    (Get-Content $BRUNO_ENV) -replace 'api_id: .*', "api_id: $API_ID" | Set-Content $BRUNO_ENV
+    Write-Host ""
+    Write-Host "[OK] Bruno environment updated with API ID: $API_ID" -ForegroundColor Green
+}
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green

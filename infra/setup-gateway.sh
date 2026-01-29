@@ -41,9 +41,10 @@ echo "🔗 Creating integrations for each service..."
 USER_INT=$(awslocal apigatewayv2 create-integration \
     --api-id $API_ID \
     --integration-type HTTP_PROXY \
-    --integration-uri http://user-service:8081/{proxy} \
+    --integration-uri http://host.docker.internal:8081/users \
     --integration-method ANY \
     --payload-format-version 1.0 \
+    --request-parameters 'overwrite:path=$request.path' \
     --query 'IntegrationId' --output text)
 
 echo "  ✓ user-service integration: $USER_INT"
@@ -52,9 +53,10 @@ echo "  ✓ user-service integration: $USER_INT"
 SHIPMENT_INT=$(awslocal apigatewayv2 create-integration \
     --api-id $API_ID \
     --integration-type HTTP_PROXY \
-    --integration-uri http://shipment-service:8082/{proxy} \
+    --integration-uri http://host.docker.internal:8082/shipments \
     --integration-method ANY \
     --payload-format-version 1.0 \
+    --request-parameters 'overwrite:path=$request.path' \
     --query 'IntegrationId' --output text)
 
 echo "  ✓ shipment-service integration: $SHIPMENT_INT"
@@ -63,9 +65,10 @@ echo "  ✓ shipment-service integration: $SHIPMENT_INT"
 ORDER_INT=$(awslocal apigatewayv2 create-integration \
     --api-id $API_ID \
     --integration-type HTTP_PROXY \
-    --integration-uri http://order-service:8083/{proxy} \
+    --integration-uri http://host.docker.internal:8083/orders \
     --integration-method ANY \
     --payload-format-version 1.0 \
+    --request-parameters 'overwrite:path=$request.path' \
     --query 'IntegrationId' --output text)
 
 echo "  ✓ order-service integration: $ORDER_INT"
@@ -135,6 +138,14 @@ echo "  ℹ️  Note: Rate limiting configuration requires additional setup in L
 
 # Get the Gateway URL
 GATEWAY_URL="$LOCALSTACK_ENDPOINT/restapis/$API_ID/prod/_user_request_"
+
+# Update Bruno environment with new API ID
+BRUNO_ENV="../bruno/environments/Direct.bru"
+if [ -f "$BRUNO_ENV" ]; then
+    sed -i.bak "s/api_id: .*/api_id: $API_ID/" "$BRUNO_ENV" && rm -f "$BRUNO_ENV.bak"
+    echo ""
+    echo "🔧 Bruno environment updated with API ID: $API_ID"
+fi
 
 echo ""
 echo "✅ API Gateway setup complete!"
