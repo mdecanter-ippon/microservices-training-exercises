@@ -5,11 +5,10 @@ $ErrorActionPreference = "Stop"
 
 $LOCALSTACK_ENDPOINT = if ($env:LOCALSTACK_ENDPOINT) { $env:LOCALSTACK_ENDPOINT } else { "http://localhost:4566" }
 
-# Use aws CLI directly with endpoint-url instead of awslocal (avoids PATH conflicts)
-function Invoke-AWSLocal {
-    param([string[]]$Args)
-    & aws --endpoint-url=$LOCALSTACK_ENDPOINT @Args
-}
+# Set dummy AWS credentials for LocalStack (required by AWS CLI but not validated)
+$env:AWS_ACCESS_KEY_ID = "test"
+$env:AWS_SECRET_ACCESS_KEY = "test"
+$env:AWS_DEFAULT_REGION = "us-east-1"
 
 Write-Host "Setting up Dornach API Gateway with LocalStack..." -ForegroundColor Cyan
 Write-Host ""
