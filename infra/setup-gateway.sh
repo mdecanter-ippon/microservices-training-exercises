@@ -71,8 +71,16 @@ ORDER_INT=$(awslocal apigatewayv2 create-integration \
 echo "  ✓ order-service integration: $ORDER_INT"
 
 # Create Routes (path-based routing)
+# Note: We need both base routes (/users) and proxy routes (/users/{proxy+})
 echo ""
 echo "🛣️  Creating routes..."
+
+# User routes
+awslocal apigatewayv2 create-route \
+    --api-id $API_ID \
+    --route-key "ANY /users" \
+    --target "integrations/$USER_INT" \
+    > /dev/null
 
 awslocal apigatewayv2 create-route \
     --api-id $API_ID \
@@ -80,7 +88,14 @@ awslocal apigatewayv2 create-route \
     --target "integrations/$USER_INT" \
     > /dev/null
 
-echo "  ✓ /users/* → user-service:8081"
+echo "  ✓ /users → user-service:8081"
+
+# Shipment routes
+awslocal apigatewayv2 create-route \
+    --api-id $API_ID \
+    --route-key "ANY /shipments" \
+    --target "integrations/$SHIPMENT_INT" \
+    > /dev/null
 
 awslocal apigatewayv2 create-route \
     --api-id $API_ID \
@@ -88,7 +103,14 @@ awslocal apigatewayv2 create-route \
     --target "integrations/$SHIPMENT_INT" \
     > /dev/null
 
-echo "  ✓ /shipments/* → shipment-service:8082"
+echo "  ✓ /shipments → shipment-service:8082"
+
+# Order routes
+awslocal apigatewayv2 create-route \
+    --api-id $API_ID \
+    --route-key "ANY /orders" \
+    --target "integrations/$ORDER_INT" \
+    > /dev/null
 
 awslocal apigatewayv2 create-route \
     --api-id $API_ID \
@@ -96,7 +118,7 @@ awslocal apigatewayv2 create-route \
     --target "integrations/$ORDER_INT" \
     > /dev/null
 
-echo "  ✓ /orders/* → order-service:8083"
+echo "  ✓ /orders → order-service:8083"
 
 # Create Stage with throttling
 echo ""
