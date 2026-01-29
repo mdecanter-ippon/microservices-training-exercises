@@ -6,9 +6,9 @@
 
 In Step 3, you added **API documentation** with springdoc-openapi:
 - **OpenApiConfig** with `@OpenAPIDefinition` for API metadata
+- **@Tag** to group endpoints in Swagger UI
 - **@Operation** and **@ApiResponse** annotations on endpoints
 - **@ExampleObject** for request/response examples
-- **@SecurityScheme** for JWT authentication documentation
 - **Swagger UI** accessible at `/swagger-ui.html`
 - **OpenAPI spec** exportable via `/v3/api-docs.yaml`
 
@@ -28,10 +28,39 @@ By the end of this exercise, you will:
 ## Prerequisites
 
 - Step 3 completed (OpenAPI documentation working)
-- **Bruno** installed (https://www.usebruno.com/downloads)
-- Docker and Docker Compose installed
-- All services running (user-service, order-service, shipment-service)
-- `awslocal` CLI available (comes with LocalStack)
+- **Docker** and **Docker Compose** installed
+- **LocalStack Auth Token** (required for API Gateway feature)
+- **awslocal** CLI installed
+- **Bash shell** (for running setup scripts)
+
+### Setup Instructions
+
+**1. LocalStack Auth Token**
+
+Set your LocalStack auth token as an environment variable before running `docker-compose`:
+
+```bash
+# Linux/macOS
+export LOCALSTACK_AUTH_TOKEN="your-token-here"
+
+# Windows PowerShell
+$env:LOCALSTACK_AUTH_TOKEN="your-token-here"
+
+# Windows CMD
+set LOCALSTACK_AUTH_TOKEN=your-token-here
+```
+
+**2. Install awslocal CLI**
+
+```bash
+pip install awscli-local
+```
+
+**3. Bash Shell (Windows only)**
+
+The setup scripts (`setup-gateway.sh`) require a bash shell. On Windows, use one of:
+- **Git Bash** (recommended - comes with Git for Windows): Right-click in folder → "Git Bash Here"
+- **WSL** (Windows Subsystem for Linux): `wsl --install` in PowerShell admin
 
 ---
 
