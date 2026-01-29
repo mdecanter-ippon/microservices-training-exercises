@@ -3,8 +3,10 @@ package com.dornach.order.service;
 import com.dornach.order.client.ShipmentClient;
 import com.dornach.order.client.ShipmentRequest;
 import com.dornach.order.client.ShipmentResponse;
+import com.dornach.order.client.UserClient;
 import com.dornach.order.domain.Order;
 import com.dornach.order.dto.CreateOrderRequest;
+import com.dornach.order.dto.UserResponse;
 import com.dornach.order.exception.OrderNotFoundException;
 import com.dornach.order.repository.OrderRepository;
 import org.slf4j.Logger;
@@ -22,15 +24,21 @@ public class OrderService {
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
+    private final UserClient userClient;
     private final ShipmentClient shipmentClient;
 
-    public OrderService(OrderRepository orderRepository, ShipmentClient shipmentClient) {
+    public OrderService(OrderRepository orderRepository, UserClient userClient, ShipmentClient shipmentClient) {
         this.orderRepository = orderRepository;
+        this.userClient = userClient;
         this.shipmentClient = shipmentClient;
     }
 
     public Order createOrder(CreateOrderRequest request) {
         log.info("Creating order for user: {}", request.userId());
+
+        // Validate user exists by calling user-service
+        UserResponse user = userClient.getUserById(request.userId());
+        log.info("User validated: {} {}", user.firstName(), user.lastName());
 
         Order order = new Order(
                 request.userId(),
