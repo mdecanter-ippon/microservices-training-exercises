@@ -13,11 +13,16 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Configuration for the RestClient used to communicate with other services.
- * This demonstrates the new Spring 6 RestClient with OAuth2 Client Credentials flow
- * for Machine-to-Machine (M2M) authentication.
+ * This demonstrates the new Spring 6 RestClient which replaces RestTemplate.
+ *
+ * Why use the injected RestClient.Builder? Spring Boot auto-configures it with
+ * observability (tracing, metrics). Using RestClient.builder() directly would bypass this.
  */
 @Configuration
 public class RestClientConfig {
+
+    @Value("${user.service.url}")
+    private String userServiceUrl;
 
     @Value("${shipment.service.url}")
     private String shipmentServiceUrl;
@@ -27,53 +32,18 @@ public class RestClientConfig {
      * This is required for client_credentials flow (M2M authentication).
      */
     @Bean
-    public OAuth2AuthorizedClientManager authorizedClientManager(
-            ClientRegistrationRepository clientRegistrationRepository,
-            OAuth2AuthorizedClientRepository authorizedClientRepository) {
-
-        OAuth2AuthorizedClientProvider authorizedClientProvider =
-                OAuth2AuthorizedClientProviderBuilder.builder()
-                        .clientCredentials()
-                        .build();
-
-        DefaultOAuth2AuthorizedClientManager authorizedClientManager =
-                new DefaultOAuth2AuthorizedClientManager(
-                        clientRegistrationRepository,
-                        authorizedClientRepository);
-
-        authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
-
-        return authorizedClientManager;
+    public RestClient userRestClient(RestClient.Builder builder) {
+        return builder
+                .baseUrl(userServiceUrl)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 
-    /**
-     * RestClient configured with custom interceptor for M2M calls to shipment-service.
-     * The interceptor automatically adds the Bearer token obtained via client_credentials.
-     */
     @Bean
-    public RestClient shipmentRestClient(OAuth2AuthorizedClientManager authorizedClientManager) {
-        return RestClient.builder()
+    public RestClient shipmentRestClient(RestClient.Builder builder) {
+        return builder
                 .baseUrl(shipmentServiceUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .requestInterceptor((request, body, execution) -> {
-                    // Create an OAuth2AuthorizeRequest for client_credentials
-                    OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
-                            .withClientRegistrationId("shipment-service")
-                            .principal("order-service")  // Principal name for M2M
-                            .build();
-
-                    // Get the authorized client (will obtain token if needed)
-                    OAuth2AuthorizedClient authorizedClient =
-                            authorizedClientManager.authorize(authorizeRequest);
-
-                    if (authorizedClient != null) {
-                        String token = authorizedClient.getAccessToken().getTokenValue();
-                        request.getHeaders().setBearerAuth(token);
-                    }
-
-                    return execution.execute(request, body);
-                })
                 .build();
     }
 }
