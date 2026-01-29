@@ -668,6 +668,43 @@ mvn test -Dtest=OrderControllerIntegrationTest
 
 ✅ The test should pass - we're testing order-service in isolation by mocking UserClient.
 
+### 7.4 Going Further (Optional)
+
+Want to practice more? Here are additional tests you can implement:
+
+| Test Case | What to Test |
+|-----------|-------------|
+| `createOrder_InvalidRequest_ReturnsBadRequest` | POST with missing required fields → expect 400 |
+| `getOrderById_ExistingOrder_ReturnsOk` | Create order, then GET → expect 200 with order data |
+| `confirmOrder_ValidOrder_ReturnsShipped` | Mock `shipmentClient.createShipment()` to return tracking, call confirm → expect SHIPPED status |
+| `cancelOrder_ValidOrder_ReturnsCancelled` | Create order, call cancel → expect CANCELLED status |
+
+**Key patterns:**
+- Use `when(...).thenReturn(...)` to mock client responses
+- Use `andExpect(jsonPath("$.field").value(...))` to verify JSON fields
+- Create test data with `mockMvc.perform(post(...))` before testing GET/confirm/cancel
+
+<details>
+<summary>💡 Example: Test invalid request</summary>
+
+```java
+@Test
+void createOrder_InvalidRequest_ReturnsBadRequest() throws Exception {
+    mockMvc.perform(post("/orders")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "userId": null,
+                  "productName": "",
+                  "quantity": 0
+                }
+                """))
+        .andExpect(status().isBadRequest());
+}
+```
+
+</details>
+
 ---
 
 ## Validation Checklist
