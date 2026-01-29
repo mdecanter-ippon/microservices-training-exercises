@@ -135,31 +135,47 @@ cd order-service && mvn spring-boot:run
 
 ## Exercise 2: Create the API Gateway
 
-**File:** `infra/setup-gateway.sh`
+**Files:**
+- `infra/setup-gateway.sh` (Linux/macOS/Git Bash)
+- `infra/setup-gateway.ps1` (Windows PowerShell)
 
-### 2.1 Examine the Setup Script
+### 2.1 Understand the Setup Script
 
-Read the existing script to understand what it does:
-```bash
-cat infra/setup-gateway.sh
-```
+The script automates the API Gateway configuration using `awslocal` (LocalStack AWS CLI):
 
-Key steps:
-1. Create an HTTP API (v2)
-2. Create integrations (connections to backend services)
-3. Create routes (path patterns)
-4. Create a stage with throttling
+| Step | AWS Command | Description |
+|------|-------------|-------------|
+| 1 | `create-api` | Creates an HTTP API (v2) named "dornach-gateway" |
+| 2 | `create-integration` | Creates 3 HTTP_PROXY integrations pointing to each service URL |
+| 3 | `create-route` | Maps URL paths to integrations: `/users/*`, `/orders/*`, `/shipments/*` |
+| 4 | `create-stage` | Creates a "prod" stage with auto-deploy enabled |
+
+**Why HTTP API v2?**
+- 71% cheaper than REST API v1
+- Lower latency (~10ms vs ~20ms)
+- Simpler configuration for basic routing
 
 ### 2.2 Run the Setup Script
 
+**Linux/macOS/Git Bash:**
 ```bash
 cd infra
 ./setup-gateway.sh
 ```
 
+**Windows PowerShell:**
+```powershell
+cd infra
+.\setup-gateway.ps1
+```
+
 Note the **API_ID** that is displayed. Export it:
 ```bash
+# Linux/macOS/Git Bash
 export DORNACH_API_ID=<your-api-id>
+
+# Windows PowerShell
+$env:DORNACH_API_ID="<your-api-id>"
 ```
 
 ### 2.3 Understand the Gateway URL
@@ -171,7 +187,11 @@ http://localhost:4566/restapis/{API_ID}/{STAGE}/_user_request_/{path}
 
 Create a shortcut:
 ```bash
+# Linux/macOS/Git Bash
 export GATEWAY="http://localhost:4566/restapis/$DORNACH_API_ID/prod/_user_request_"
+
+# Windows PowerShell
+$env:GATEWAY="http://localhost:4566/restapis/$env:DORNACH_API_ID/prod/_user_request_"
 ```
 
 ---
