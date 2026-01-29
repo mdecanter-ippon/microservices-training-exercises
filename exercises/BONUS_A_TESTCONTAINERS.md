@@ -1,10 +1,16 @@
 # Bonus A: Integration Tests with Testcontainers
 
-> **⚠️ Before starting:** Make sure you have completed Step 7.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-7-complete
-> ```
+---
+
+## Recap: Step 7
+
+In Step 7, you implemented **distributed tracing**:
+- **Zipkin** running as trace collector at `localhost:9411`
+- **Micrometer Tracing** with OpenTelemetry bridge
+- **Trace ID** shared across all services in a request
+- **Log correlation** with `[serviceName,traceId,spanId]` pattern
+- **Waterfall visualization** showing request flow across services
+- **Error tracing** to identify which service caused failures
 
 ---
 
