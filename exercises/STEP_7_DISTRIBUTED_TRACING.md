@@ -1,10 +1,16 @@
 # Step 7: Distributed Tracing
 
-> **⚠️ Before starting:** Make sure you have completed Step 6.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-6-complete
-> ```
+---
+
+## Recap: Step 6
+
+In Step 6, you implemented **M2M (Machine-to-Machine) authentication**:
+- **Client Credentials flow** for service-to-service calls
+- **order-service-client** confidential client in Keycloak
+- **OAuth2AuthorizedClientManager** for automatic token lifecycle
+- **OAuth2ClientHttpRequestInterceptor** to inject tokens into RestClient calls
+- **RBAC with @PreAuthorize** using `service-caller` role
+- Services can now authenticate as themselves, not on behalf of users
 
 ---
 
