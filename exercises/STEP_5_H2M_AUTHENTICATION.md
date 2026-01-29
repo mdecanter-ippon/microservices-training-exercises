@@ -1,10 +1,15 @@
 # Step 5: H2M Authentication (Human-to-Machine)
 
-> **⚠️ Before starting:** Make sure you have completed Step 4.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-4-complete
-> ```
+---
+
+## Recap: Step 4
+
+In Step 4, you configured an **API Gateway** with LocalStack:
+- **HTTP API v2** created with `awslocal` CLI
+- **Path-based routing** to user-service, order-service, and shipment-service
+- **Single entry point** at `localhost:4566` instead of multiple ports
+- **Rate limiting** with Token Bucket algorithm (burst + rate limits)
+- **`setup-gateway.sh`** script for reproducible infrastructure
 
 ---
 
