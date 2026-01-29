@@ -16,6 +16,9 @@ import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * OpenAPI 3.1 configuration for the User Service.
  * This serves as the single source of truth for API contracts.
@@ -95,14 +98,15 @@ public class OpenApiConfig {
     }
 
     private ApiResponse createErrorResponse(String title, String description) {
+        Map<String, Object> errorExample = new LinkedHashMap<>();
+        errorExample.put("type", "https://api.dornach.com/errors/error-type");
+        errorExample.put("title", title);
+        errorExample.put("status", 400);
+        errorExample.put("detail", "Detailed error message");
+        errorExample.put("timestamp", "2024-01-15T10:30:00Z");
+
         Example example = new Example();
-        example.setValue(
-                "{\"type\": \"https://api.dornach.com/errors/error-type\", " +
-                "\"title\": \"" + title + "\", " +
-                "\"status\": 400, " +
-                "\"detail\": \"Detailed error message\", " +
-                "\"timestamp\": \"2024-01-15T10:30:00Z\"}"
-        );
+        example.setValue(errorExample);
 
         MediaType mediaType = new MediaType();
         mediaType.addExamples("default", example);
