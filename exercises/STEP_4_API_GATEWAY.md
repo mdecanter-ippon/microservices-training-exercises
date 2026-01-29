@@ -133,6 +133,8 @@ cd shipment-service && mvn spring-boot:run
 cd order-service && mvn spring-boot:run
 ```
 
+> **Why separate terminals instead of Docker?** We deliberately run services on the host machine rather than in Docker containers. Running all services in Docker would require complex network configuration (Docker networks, service discovery, DNS resolution between containers). By running services locally, the API Gateway in LocalStack can reach them via `host.docker.internal`, which simplifies the setup significantly.
+
 ---
 
 ## Exercise 2: Create the API Gateway
@@ -247,16 +249,20 @@ awslocal apigatewayv2 get-integrations --api-id $DORNACH_API_ID
 
 ### 4.1 Route Patterns
 
-The setup script creates routes like:
+The setup script creates routes with path forwarding:
 ```
-ANY /users/{proxy+}    → http://host.docker.internal:8081/{proxy}
-ANY /orders/{proxy+}   → http://host.docker.internal:8083/{proxy}
-ANY /shipments/{proxy+} → http://host.docker.internal:8082/{proxy}
+ANY /users           → http://host.docker.internal:8081/users
+ANY /users/{proxy+}  → http://host.docker.internal:8081/users/* (via path mapping)
+ANY /orders          → http://host.docker.internal:8083/orders
+ANY /orders/{proxy+} → http://host.docker.internal:8083/orders/* (via path mapping)
+ANY /shipments           → http://host.docker.internal:8082/shipments
+ANY /shipments/{proxy+}  → http://host.docker.internal:8082/shipments/* (via path mapping)
 ```
 
 **Syntax:**
 - `ANY` = all HTTP methods (GET, POST, PUT, DELETE)
 - `{proxy+}` = capture everything after the prefix (greedy match)
+- Path mapping (`overwrite:path=$request.path`) forwards the full request path to backend
 
 ### 4.2 Test Path Forwarding
 
@@ -279,13 +285,11 @@ You get a **404 Not Found** from the gateway because there's no route matching `
 
 ---
 
-## Exercise 5: Configure Rate Limiting
-
-**File:** `infra/setup-gateway.sh`
+## Exercise 5: Rate Limiting (Concept)
 
 ### 5.1 Understand Throttling Settings
 
-In the setup script, find the stage creation:
+In a production AWS environment, you would configure rate limiting on the stage:
 ```bash
 awslocal apigatewayv2 create-stage \
     --api-id $API_ID \
@@ -297,69 +301,130 @@ awslocal apigatewayv2 create-stage \
 - **RateLimit (100):** Average requests per second allowed
 - **BurstLimit (200):** Maximum burst capacity (token bucket)
 
-### 5.2 Test Rate Limiting
+> **Note:** Rate limiting requires LocalStack Pro. The current setup script creates a basic stage without throttling. In production AWS, throttling is automatically available.
 
-Send many requests quickly:
-```bash
-# Option 1: Simple bash loop
-for i in {1..150}; do
-  curl -s -o /dev/null -w "%{http_code}\n" $GATEWAY/users
-done | sort | uniq -c
+### 5.2 How Rate Limiting Works
 
-# Option 2: Apache Bench (if installed)
-ab -n 200 -c 50 $GATEWAY/users
+The **Token Bucket Algorithm**:
+1. A bucket holds tokens (up to BurstLimit)
+2. Tokens are added at RateLimit per second
+3. Each request consumes one token
+4. When bucket is empty, requests get HTTP 429
+
+```
+Bucket: [████████████████████] 200 tokens (burst)
+        ↓ Request arrives
+Bucket: [███████████████████ ] 199 tokens
+        ↓ 100 requests/sec refill
 ```
 
-**Expected result:** After exceeding the rate limit, you'll see HTTP **429 Too Many Requests**.
+### 5.3 Test Rate Limiting (LocalStack Pro Only)
 
-### 5.3 Modify Rate Limits (Optional)
-
-To test with lower limits:
+If you have LocalStack Pro, you can test rate limiting:
 ```bash
 # Delete existing stage
 awslocal apigatewayv2 delete-stage \
     --api-id $DORNACH_API_ID \
     --stage-name prod
 
-# Create with lower limits
+# Create with throttling
 awslocal apigatewayv2 create-stage \
     --api-id $DORNACH_API_ID \
     --stage-name prod \
     --default-route-settings "ThrottlingBurstLimit=10,ThrottlingRateLimit=5"
+
+# Test with many requests
+for i in {1..20}; do
+  curl -s -o /dev/null -w "%{http_code}\n" $GATEWAY/users
+done | sort | uniq -c
 ```
 
-Now retry the test - you'll hit rate limits much faster.
+**Expected result:** After exceeding the rate limit, you'll see HTTP **429 Too Many Requests**.
 
 ---
 
 ## Challenge: Add Health Route (Optional)
 
-Create a route that returns health status from all services:
+### Context
 
-1. Add a new route `/health` that points to any service's actuator
-2. Test that `/health` returns status via the gateway
+In production, load balancers and monitoring systems need to check if services are healthy. Instead of exposing each service's health endpoint directly, we can expose a single `/health` route through the gateway.
+
+**Goal:** Add a `/health` route that returns the health status of one of our services.
+
+### Steps
+
+1. **Check that the environment variables are set:**
+   ```bash
+   # Linux/macOS
+   echo $DORNACH_API_ID
+   echo $GATEWAY
+
+   # Windows PowerShell
+   echo $env:DORNACH_API_ID
+   echo $env:GATEWAY
+   ```
+
+   If the variables are empty or incorrect, set them:
+   ```bash
+   # Linux/macOS
+   export DORNACH_API_ID=<your-api-id>
+   export GATEWAY="http://localhost:4566/restapis/$DORNACH_API_ID/prod/_user_request_"
+
+   # Windows PowerShell
+   $env:DORNACH_API_ID="<your-api-id>"
+   $env:GATEWAY="http://localhost:4566/restapis/$env:DORNACH_API_ID/prod/_user_request_"
+   ```
+
+2. **Create an integration for the health endpoint:**
+
+   Unlike the other integrations that forward paths dynamically, this one points to a specific endpoint:
+   ```bash
+   HEALTH_INT=$(awslocal apigatewayv2 create-integration \
+       --api-id $DORNACH_API_ID \
+       --integration-type HTTP_PROXY \
+       --integration-uri http://host.docker.internal:8081/actuator/health \
+       --integration-method GET \
+       --query 'IntegrationId' --output text)
+
+   echo "Health integration created: $HEALTH_INT"
+   ```
+
+3. **Create the route:**
+
+   Note that we use `GET /health` instead of `ANY /health` since health checks are read-only:
+   ```bash
+   awslocal apigatewayv2 create-route \
+       --api-id $DORNACH_API_ID \
+       --route-key "GET /health" \
+       --target "integrations/$HEALTH_INT"
+   ```
+
+4. **Test the health route:**
+   ```bash
+   curl $GATEWAY/health
+   ```
+
+   **Expected response:**
+   ```json
+   {"status":"UP"}
+   ```
+
+### Going Further
+
+**Question:** How would you aggregate health from all three services?
 
 <details>
-<summary>💡 Hint</summary>
+<summary>💡 Answer</summary>
 
-```bash
-# Create integration for health
-HEALTH_INT=$(awslocal apigatewayv2 create-integration \
-    --api-id $DORNACH_API_ID \
-    --integration-type HTTP_PROXY \
-    --integration-uri http://host.docker.internal:8081/actuator/health \
-    --integration-method GET \
-    --query 'IntegrationId' --output text)
+The gateway can only route to one backend per route. To aggregate health from multiple services, you would need:
 
-# Create route
-awslocal apigatewayv2 create-route \
-    --api-id $DORNACH_API_ID \
-    --route-key "GET /health" \
-    --target "integrations/$HEALTH_INT"
+1. **Option A:** Create a dedicated health aggregator service that calls all services and combines results
+2. **Option B:** Use Spring Boot's composite health indicators in one of the services
+3. **Option C:** Create separate routes (`/health/users`, `/health/orders`, `/health/shipments`) and let the client aggregate
 
-# Test it
-curl $GATEWAY/health
-```
+In production, tools like Kubernetes or AWS ELB handle health checks per service independently.
+
+</details>
 
 </details>
 
@@ -370,8 +435,10 @@ curl $GATEWAY/health
 ### Setup Bruno Environment
 
 1. Open Bruno
-2. Select the **Gateway** environment (bottom-left dropdown)
-3. This environment uses the gateway URL instead of direct service URLs
+2. Keep the **Direct** environment selected
+3. The `api_id` is automatically updated by the setup script
+
+> **Note:** The setup script updates `bruno/environments/Direct.bru` with the new API ID. The `gateway` variable uses interpolation (`{{base_url}}/restapis/{{api_id}}/...`) so it updates automatically.
 
 ### Run Step 4 Tests
 
@@ -408,10 +475,11 @@ Before moving to Step 5, verify:
 - [ ] LocalStack is running (`docker-compose up -d localstack`)
 - [ ] Gateway setup script executes successfully
 - [ ] `$GATEWAY/users` returns the same data as `localhost:8081/users`
+- [ ] `$GATEWAY/users/{id}` returns a single user (path forwarding works)
 - [ ] `$GATEWAY/orders` routes correctly to order-service
 - [ ] `$GATEWAY/shipments` routes correctly to shipment-service
-- [ ] Rate limiting works (429 returned when limit exceeded)
 - [ ] Bruno "Step 4 - API Gateway" tests pass
+- [ ] (Optional, LocalStack Pro) Rate limiting works (429 returned when limit exceeded)
 
 ---
 

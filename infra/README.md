@@ -68,8 +68,9 @@ cd infra
 
 This creates:
 - HTTP API Gateway (v2)
-- Path-based routing to services
-- Rate limiting (100 req/s, burst 200)
+- Path-based routing to services with full path forwarding
+- Production stage with auto-deploy
+- Automatically updates Bruno environment with the new API ID
 
 **Example output:**
 ```
@@ -117,15 +118,35 @@ export DORNACH_API_ID=abc123
 
 | Gateway Path | Target Service | Notes |
 |-------------|----------------|-------|
-| `/users/*` | user-service:8081 | User management |
-| `/shipments/*` | shipment-service:8082 | Shipment tracking |
-| `/orders/*` | order-service:8083 | Order orchestration |
+| `/users`, `/users/*` | user-service:8081 | User management |
+| `/shipments`, `/shipments/*` | shipment-service:8082 | Shipment tracking |
+| `/orders`, `/orders/*` | order-service:8083 | Order orchestration |
 
-## Rate Limiting
+**Path Forwarding:** The gateway uses `overwrite:path=$request.path` parameter mapping to forward the full request path to backend services. For example:
+- `GET /users` → `GET http://service:8081/users`
+- `GET /users/abc-123` → `GET http://service:8081/users/abc-123`
 
-- **Rate Limit:** 100 requests/second
-- **Burst Limit:** 200 requests
-- **Response:** HTTP 429 (Too Many Requests)
+## Rate Limiting (LocalStack Pro)
+
+Rate limiting requires LocalStack Pro. To configure throttling:
+
+```bash
+# Delete existing stage
+awslocal apigatewayv2 delete-stage \
+    --api-id $DORNACH_API_ID \
+    --stage-name prod
+
+# Create with throttling
+awslocal apigatewayv2 create-stage \
+    --api-id $DORNACH_API_ID \
+    --stage-name prod \
+    --default-route-settings "ThrottlingBurstLimit=200,ThrottlingRateLimit=100"
+```
+
+**Parameters:**
+- **Rate Limit:** Requests per second allowed
+- **Burst Limit:** Maximum burst capacity (token bucket)
+- **Response:** HTTP 429 (Too Many Requests) when exceeded
 
 **Testing rate limits:**
 ```bash
@@ -208,6 +229,16 @@ curl http://localhost:8082/actuator/health
 curl http://localhost:8083/actuator/health
 
 # For Docker, use host.docker.internal instead of localhost
+```
+
+### Path not forwarded correctly
+
+**Problem:** Request to `/users/123` returns all users instead of one user.
+
+**Solution:** The integration needs `--request-parameters 'overwrite:path=$request.path'` to forward the full path. Recreate the gateway:
+```bash
+./cleanup-gateway.sh
+./setup-gateway.sh
 ```
 
 ### Rate limiting not working
