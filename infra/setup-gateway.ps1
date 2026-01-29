@@ -88,29 +88,48 @@ $ORDER_INT = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-integra
 Write-Host "  [OK] order-service integration: $ORDER_INT" -ForegroundColor Green
 
 # Create Routes (path-based routing)
+# Note: We need both base routes (/users) and proxy routes (/users/{proxy+})
 Write-Host ""
 Write-Host "Creating routes..." -ForegroundColor Cyan
+
+# User routes
+$null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
+    --api-id $API_ID `
+    --route-key "ANY /users" `
+    --target "integrations/$USER_INT"
 
 $null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
     --api-id $API_ID `
     --route-key "ANY /users/{proxy+}" `
     --target "integrations/$USER_INT"
 
-Write-Host "  [OK] /users/* -> user-service:8081" -ForegroundColor Green
+Write-Host "  [OK] /users -> user-service:8081" -ForegroundColor Green
+
+# Shipment routes
+$null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
+    --api-id $API_ID `
+    --route-key "ANY /shipments" `
+    --target "integrations/$SHIPMENT_INT"
 
 $null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
     --api-id $API_ID `
     --route-key "ANY /shipments/{proxy+}" `
     --target "integrations/$SHIPMENT_INT"
 
-Write-Host "  [OK] /shipments/* -> shipment-service:8082" -ForegroundColor Green
+Write-Host "  [OK] /shipments -> shipment-service:8082" -ForegroundColor Green
+
+# Order routes
+$null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
+    --api-id $API_ID `
+    --route-key "ANY /orders" `
+    --target "integrations/$ORDER_INT"
 
 $null = aws --endpoint-url=$LOCALSTACK_ENDPOINT apigatewayv2 create-route `
     --api-id $API_ID `
     --route-key "ANY /orders/{proxy+}" `
     --target "integrations/$ORDER_INT"
 
-Write-Host "  [OK] /orders/* -> order-service:8083" -ForegroundColor Green
+Write-Host "  [OK] /orders -> order-service:8083" -ForegroundColor Green
 
 # Create Stage
 Write-Host ""
