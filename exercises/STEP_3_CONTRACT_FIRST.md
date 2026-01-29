@@ -11,6 +11,11 @@ In Step 2, you implemented **service communication** in order-service:
 - **OrderService** orchestrating calls to both services
 - **Resilience4j** retry and timeout for fault tolerance
 
+> **Tip:** You can now run all integration tests in order-service to verify your implementation. The test class has more complete coverage than the single test from Exercise 7:
+> ```bash
+> cd order-service && mvn test
+> ```
+
 ---
 
 ## Objectives
@@ -20,14 +25,13 @@ By the end of this exercise, you will:
 - Enrich endpoints with OpenAPI annotations
 - Access and use Swagger UI
 - Export OpenAPI specifications
-- Generate type-safe clients from the specification
+- Understand how to generate type-safe clients from the specification
 
 ---
 
 ## Prerequisites
 
 - Step 2 completed (service communication working)
-- **Bruno** installed (https://www.usebruno.com/downloads)
 - Services running (user-service, order-service)
 - Basic understanding of API documentation
 
@@ -39,33 +43,69 @@ Your microservices need documentation. Instead of writing documentation manually
 
 **Contract-First benefits:**
 1. **Type Safety** - Generated clients detect breaking changes at compile time
-2. **Developer Velocity** - IDE auto-completion, no manual HTTP calls
-3. **Living Documentation** - Always synchronized with code
+2. **Developer Velocity** - Instead of manually configuring `RestClient` with URLs, headers, and response types, you can generate an `ApiClient` from the OpenAPI spec that handles all HTTP calls automatically with full IDE auto-completion
+3. **Living Documentation** - Always synchronized with code (Swagger UI reflects your actual endpoints)
 
 ---
 
 ## Exercise 1: Configure OpenAPI
 
-**File:** `user-service/src/main/java/com/dornach/user/config/OpenApiConfig.java`
+You'll create an OpenAPI configuration class for `user-service`.
 
 ### 1.1 Verify Dependencies
 
-Check that `pom.xml` includes springdoc-openapi:
+Check the **root `pom.xml`** (at the project root, not inside user-service). This parent POM defines shared dependencies that all microservices inherit:
+
 ```xml
+<!-- In the root pom.xml -->
 <dependency>
     <groupId>org.springdoc</groupId>
     <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>${springdoc.version}</version>
 </dependency>
 ```
 
+This dependency provides:
+- Automatic OpenAPI spec generation from your controllers
+- Swagger UI at `/swagger-ui.html`
+- JSON/YAML spec at `/v3/api-docs`
+
 ### 1.2 Create the Configuration Class
 
+Create the file: `user-service/src/main/java/com/dornach/user/config/OpenApiConfig.java`
+
+**Step 1: Create an empty configuration class**
+
 ```java
+package com.dornach.user.config;
+
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+}
+```
+
+Start user-service and open http://localhost:8081/swagger-ui.html
+
+You should already see your endpoints listed, but without any custom metadata.
+
+**Step 2: Add the @OpenAPIDefinition annotation**
+
+Now add basic API information:
+
+```java
+package com.dornach.user.config;
+
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Info;
+import org.springframework.context.annotation.Configuration;
+
 @Configuration
 @OpenAPIDefinition(
     info = @Info(
-        title = "???",           // What should be the API title?
-        version = "???",         // What version?
+        title = "Dornach User Service API",
+        version = "1.0.0",
         description = "Identity and user management service"
     )
 )
@@ -73,10 +113,22 @@ public class OpenApiConfig {
 }
 ```
 
-<details>
-<summary>💡 Hint</summary>
+Restart the service and refresh Swagger UI. You should now see:
+- Your custom title "Dornach User Service API"
+- Version "1.0.0"
+- The description
+
+**Step 3: Add contact and server information**
 
 ```java
+package com.dornach.user.config;
+
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Contact;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.servers.Server;
+import org.springframework.context.annotation.Configuration;
+
 @Configuration
 @OpenAPIDefinition(
     info = @Info(
@@ -93,47 +145,66 @@ public class OpenApiConfig {
 }
 ```
 
-</details>
-
-### 1.3 Validate Configuration
-
-Start the service and access Swagger UI:
-```bash
-cd user-service && mvn spring-boot:run
-```
-
-Open in browser: http://localhost:8081/swagger-ui.html
-
-You should see:
-- The API title and description
-- All endpoints listed
-- Models/schemas section
+Restart and verify the server URL appears in Swagger UI.
 
 ---
 
 ## Exercise 2: Enrich Endpoints with Annotations
 
+Now let's improve the documentation for individual endpoints.
+
 **File:** `user-service/src/main/java/com/dornach/user/controller/UserController.java`
 
-### 2.1 Add Operation Documentation
+### 2.1 Understand OpenAPI Annotations
 
-Update the `createUser` method with OpenAPI annotations:
+Before coding, here's what each annotation does:
+
+| Annotation | Purpose |
+|------------|---------|
+| `@Tag` | Groups endpoints under a category (shown as a collapsible section in Swagger UI) |
+| `@Operation` | Describes what an endpoint does (summary + detailed description) |
+| `@ApiResponse` | Documents possible HTTP responses (status codes, descriptions) |
+| `@ExampleObject` | Provides example request/response bodies for "Try it out" |
+
+### 2.2 Add @Tag to the Controller
+
+Add a `@Tag` annotation to group all user endpoints:
 
 ```java
-@PostMapping
-@Operation(
-    summary = "???",                    // Short description
-    description = "???"                 // Detailed description
-)
-@ApiResponse(responseCode = "201", description = "User created")
-@ApiResponse(responseCode = "400", description = "Validation error")
-public ResponseEntity<UserResponse> createUser(...) {
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@RestController
+@RequestMapping("/users")
+@Tag(name = "Users", description = "User management operations")
+public class UserController {
 ```
 
-<details>
-<summary>💡 Hint</summary>
+Restart and refresh Swagger UI. Your endpoints should now be grouped under "Users".
+
+### 2.3 Add @Operation to createUser
+
+Find the `createUser` method and add an `@Operation` annotation:
 
 ```java
+import io.swagger.v3.oas.annotations.Operation;
+
+@PostMapping
+@Operation(
+    summary = "Create a new user",
+    description = "Creates a new user with the specified details. Email must be unique."
+)
+public ResponseEntity<UserResponse> createUser(
+```
+
+Restart and expand `POST /users` in Swagger UI. You should see your summary and description.
+
+### 2.4 Add @ApiResponse Annotations
+
+Document the possible responses:
+
+```java
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 @PostMapping
 @Operation(
     summary = "Create a new user",
@@ -141,22 +212,23 @@ public ResponseEntity<UserResponse> createUser(...) {
 )
 @ApiResponse(responseCode = "201", description = "User created successfully")
 @ApiResponse(responseCode = "400", description = "Validation error - invalid input")
-@ApiResponse(responseCode = "409", description = "Conflict - email already exists")
 public ResponseEntity<UserResponse> createUser(
-    @Valid @RequestBody CreateUserRequest request
-) {
 ```
 
-</details>
+Restart and check the "Responses" section in Swagger UI for this endpoint.
 
-### 2.2 Add Request Examples
+### 2.5 Add a Request Example
 
 Add an example to help API consumers:
 
 ```java
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+
 @PostMapping
 @Operation(
     summary = "Create a new user",
+    description = "Creates a new user with the specified details. Email must be unique.",
     requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
         content = @Content(
             examples = @ExampleObject(
@@ -173,53 +245,63 @@ Add an example to help API consumers:
         )
     )
 )
+@ApiResponse(responseCode = "201", description = "User created successfully")
+@ApiResponse(responseCode = "400", description = "Validation error - invalid input")
+public ResponseEntity<UserResponse> createUser(
 ```
 
-### 2.3 Validate in Swagger UI
+Restart and click "Try it out" on `POST /users`. The example should be pre-filled.
+
+### 2.6 Verify Everything Works
 
 1. Refresh http://localhost:8081/swagger-ui.html
 2. Expand the `POST /users` endpoint
 3. Click "Try it out"
 4. Verify the example is pre-filled
+5. Execute the request and verify it works
 
----
-
-## Exercise 3: Add Security Scheme
-
-**File:** `user-service/src/main/java/com/dornach/user/config/OpenApiConfig.java`
-
-Add JWT security documentation (you'll implement actual security in Step 5):
+<details>
+<summary>Full solution for createUser</summary>
 
 ```java
-@SecurityScheme(
-    name = "bearerAuth",
-    type = SecuritySchemeType.HTTP,
-    scheme = "bearer",
-    bearerFormat = "JWT",
-    description = "JWT token obtained from Keycloak"
+@PostMapping
+@Operation(
+    summary = "Create a new user",
+    description = "Creates a new user with the specified details. Email must be unique.",
+    requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        content = @Content(
+            examples = @ExampleObject(
+                name = "Employee",
+                value = """
+                    {
+                      "email": "alice@dornach.com",
+                      "firstName": "Alice",
+                      "lastName": "Martin",
+                      "role": "EMPLOYEE"
+                    }
+                    """
+            )
+        )
+    )
 )
-public class OpenApiConfig {
+@ApiResponse(responseCode = "201", description = "User created successfully")
+@ApiResponse(responseCode = "400", description = "Validation error - invalid input")
+public ResponseEntity<UserResponse> createUser(
+        @Valid @RequestBody CreateUserRequest request) {
+    var user = userService.createUser(request);
+    return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
 }
 ```
 
-In the controller, mark endpoints as requiring authentication:
-
-```java
-@Operation(
-    summary = "Get all users",
-    security = @SecurityRequirement(name = "bearerAuth")
-)
-@GetMapping
-public List<UserResponse> getAllUsers() {
-```
-
-**Validation:** Swagger UI should now show a "Lock" icon and an "Authorize" button.
+</details>
 
 ---
 
-## Exercise 4: Export OpenAPI Specification
+## Exercise 3: Export OpenAPI Specification
 
-### 4.1 Get the Specification
+The OpenAPI spec is what makes contract-first development possible.
+
+### 3.1 Get the Specification
 
 While the service is running:
 
@@ -231,7 +313,7 @@ curl http://localhost:8081/v3/api-docs
 curl http://localhost:8081/v3/api-docs.yaml
 ```
 
-### 4.2 Save to File
+### 3.2 Save to File
 
 Create a directory and export:
 
@@ -240,48 +322,42 @@ mkdir -p openapi
 curl http://localhost:8081/v3/api-docs.yaml > openapi/user-service.yaml
 ```
 
-### 4.3 Examine the Specification
+### 3.3 Examine the Specification
 
 Open `openapi/user-service.yaml` and find:
+- The `info` section (your title, version, description)
 - The `paths` section (your endpoints)
-- The `components/schemas` section (your DTOs)
-- The `security` section (JWT configuration)
+- The `components/schemas` section (your DTOs: CreateUserRequest, UserResponse, etc.)
 
 ---
 
-## Exercise 5: Generate a Client (Demonstration)
+## Exercise 4: Client Generation (Demonstration)
 
-This exercise demonstrates how to generate clients. In real projects, this is typically done in CI/CD.
+This exercise demonstrates how generated clients work. In real projects, this is typically done in CI/CD.
 
-### 5.1 Install OpenAPI Generator (optional)
+### 4.1 The Problem with Manual HTTP Calls
 
-```bash
-# macOS
-brew install openapi-generator
-
-# Or use npm
-npm install -g @openapitools/openapi-generator-cli
-```
-
-### 5.2 Generate a Java Client
-
-```bash
-openapi-generator-cli generate \
-    -i openapi/user-service.yaml \
-    -g java \
-    -o generated-clients/java/user-service-client \
-    --additional-properties=library=restclient
-```
-
-### 5.3 Generated Client Usage
-
-The generated code provides type-safe access:
+When you manually configure `RestClient`:
 
 ```java
-// Manual approach (error-prone)
-RestClient.get().uri("/users/{id}", userId).retrieve().body(UserResponse.class);
+// Manual approach - error-prone
+RestClient.get()
+    .uri("/users/{id}", userId)
+    .retrieve()
+    .body(UserResponse.class);  // What if UserResponse changes?
+```
 
-// Generated client (type-safe)
+**Problems:**
+- No compile-time safety if the API changes
+- No auto-completion for fields
+- Easy to make typos in URLs
+
+### 4.2 Generated Clients Solve This
+
+From the OpenAPI spec, you can generate a type-safe client:
+
+```java
+// Generated client - type-safe
 UsersApi api = new UsersApi();
 UserResponse user = api.getUserById(userId);  // Auto-completion!
 ```
@@ -289,47 +365,39 @@ UserResponse user = api.getUserById(userId);  // Auto-completion!
 **Question:** What happens if the API changes `firstName` to `fullName`?
 
 <details>
-<summary>💡 Answer</summary>
+<summary>Answer</summary>
 
 With a generated client, you get a **compile-time error** instead of a **runtime error**. The client code references `user.firstName`, which no longer exists. This is caught immediately during the build, not in production.
 
 </details>
 
----
+### 4.3 How to Generate (Optional)
 
-## Challenge: Document All Services (Optional)
-
-Apply the same OpenAPI configuration to:
-1. `order-service` - Document the order creation and confirmation endpoints
-2. `shipment-service` - Document the shipment tracking endpoint
-
-Add examples for each endpoint.
-
----
-
-## Validation with Bruno
-
-Step 3 focuses on documentation - validation is done via the OpenAPI spec itself.
-
-### Check OpenAPI Spec Accessibility
+If you want to try it:
 
 ```bash
-# Test JSON endpoint
-curl -s http://localhost:8081/v3/api-docs | jq '.info.title'
-# Should output: "Dornach User Service API"
+# Install OpenAPI Generator
+brew install openapi-generator  # macOS
 
-# Test YAML endpoint
-curl -s http://localhost:8081/v3/api-docs.yaml | head -20
-# Should show OpenAPI specification header
+# Generate a Java client
+openapi-generator generate \
+    -i openapi/user-service.yaml \
+    -g java \
+    -o generated-clients/java/user-service-client \
+    --additional-properties=library=restclient
 ```
 
-### Manual Validation
+---
 
-1. Open http://localhost:8081/swagger-ui.html
-2. Verify all endpoints are documented
-3. Click "Try it out" on `POST /users`
-4. Verify the example is pre-filled
-5. Execute the request and verify it works
+## Challenge: Document Other Endpoints (Optional)
+
+Apply the same OpenAPI annotations to:
+1. `GET /users` - List all users
+2. `GET /users/{id}` - Get user by ID
+3. `PUT /users/{id}` - Update user
+4. `DELETE /users/{id}` - Delete user
+
+Add examples for each endpoint.
 
 ---
 
@@ -339,10 +407,9 @@ Before moving to Step 4, verify:
 
 - [ ] Swagger UI accessible at `/swagger-ui.html`
 - [ ] API title and description appear correctly
-- [ ] All endpoints are documented with summaries
+- [ ] `POST /users` has @Operation with summary
+- [ ] `POST /users` has @ApiResponse annotations
 - [ ] `POST /users` has a request example
-- [ ] Security scheme (bearerAuth) is configured
-- [ ] "Authorize" button appears in Swagger UI
 - [ ] OpenAPI spec exportable via `/v3/api-docs.yaml`
 
 ---
@@ -351,16 +418,17 @@ Before moving to Step 4, verify:
 
 In this step, you learned:
 - **springdoc-openapi** generates documentation from annotations
+- **@OpenAPIDefinition** configures API metadata
+- **@Tag** groups endpoints
 - **@Operation** and **@ApiResponse** describe endpoints
 - **@ExampleObject** provides request/response examples
-- **@SecurityScheme** documents authentication requirements
-- **OpenAPI Generator** creates type-safe clients in any language
+- **OpenAPI Generator** can create type-safe clients in any language
+
+> **Note:** Security annotations (@SecurityScheme, @SecurityRequirement) will be covered in Step 5 when you implement actual authentication.
 
 ---
 
 ## Before Moving On
-
-Make sure you're ready for Step 4:
 
 **Option A:** You completed all exercises
 ```bash
