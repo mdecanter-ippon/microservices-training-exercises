@@ -1,10 +1,16 @@
 # Step 4: API Gateway
 
-> **⚠️ Before starting:** Make sure you have completed Step 3.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-3-complete
-> ```
+---
+
+## Recap: Step 3
+
+In Step 3, you added **API documentation** with springdoc-openapi:
+- **OpenApiConfig** with `@OpenAPIDefinition` for API metadata
+- **@Operation** and **@ApiResponse** annotations on endpoints
+- **@ExampleObject** for request/response examples
+- **@SecurityScheme** for JWT authentication documentation
+- **Swagger UI** accessible at `/swagger-ui.html`
+- **OpenAPI spec** exportable via `/v3/api-docs.yaml`
 
 ---
 
