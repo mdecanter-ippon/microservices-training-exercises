@@ -1,10 +1,15 @@
 # Step 3: Contract-First & API Documentation
 
-> **⚠️ Before starting:** Make sure you have completed Step 2.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-2-complete
-> ```
+---
+
+## Recap: Step 2
+
+In Step 2, you implemented **service communication** in order-service:
+- **RestClientConfig** with two `RestClient` beans (userRestClient, shipmentRestClient)
+- **UserClient** interface + implementation to validate users exist
+- **ShipmentClient** interface + implementation to create shipments
+- **OrderService** orchestrating calls to both services
+- **Resilience4j** retry and timeout for fault tolerance
 
 ---
 
