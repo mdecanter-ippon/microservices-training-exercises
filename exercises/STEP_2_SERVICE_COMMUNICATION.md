@@ -578,73 +578,95 @@ resilience4j:
 
 ### 6.2 Apply to Clients
 
-Add `@Retry` annotation to both client implementations:
+Add `@Retry` annotation to the client implementations. Each client gets retry for its own downstream service:
 
+**UserClientImpl.java:**
 ```java
 @Override
-@Retry(name = "userService", fallbackMethod = "getUserByIdFallback")
+@Retry(name = "userService")
 public UserResponse getUserById(UUID userId) {
     // existing code
 }
+```
 
-private UserResponse getUserByIdFallback(UUID userId, Exception ex) {
-    log.severe("User service unavailable: " + ex.getMessage());
-    throw new RuntimeException("User service is unavailable");
+**ShipmentClientImpl.java:**
+```java
+@Override
+@Retry(name = "shipmentService")
+public ShipmentResponse createShipment(ShipmentRequest request) {
+    // existing code
 }
 ```
 
-Do the same for `ShipmentClientImpl` with `name = "shipmentService"`.
+> **Note:** Each client has its own retry configuration. If user-service is slow/down, only `userService` retry kicks in. Same for shipment-service.
 
 ### 6.3 Test Retry
 
-1. Stop user-service
-2. Try to create an order
-3. Watch order-service logs - you'll see retry attempts
+1. **Restart order-service** (to pick up the `@Retry` annotation)
+2. Stop user-service
+3. Try to create an order
+4. Watch order-service logs - you'll see 3 retry attempts before failure
+
+```
+WARN  Retry 'userService', waiting 500ms before retry attempt '1'
+WARN  Retry 'userService', waiting 500ms before retry attempt '2'
+ERROR Retry 'userService' recorded a failed retry attempt
+```
 
 ---
 
 ## Exercise 7: Integration Test
 
-Create: `order-service/src/test/java/com/dornach/order/controller/OrderControllerIntegrationTest.java`
+Test that order creation works when user-service returns a valid user.
+
+### 7.1 Understand the Test Structure
+
+Open: `order-service/src/test/java/com/dornach/order/controller/OrderControllerIntegrationTest.java`
+
+The class is pre-created with all imports configured:
+- **@SpringBootTest** - Loads the full application context
+- **@AutoConfigureMockMvc** - Configures MockMvc for HTTP testing
+- **@MockitoBean** - Replaces real beans with mocks (so we don't call real user-service)
+
+### 7.2 Implement the Test
+
+Uncomment and complete the `createOrder_ValidUser_ReturnsCreated` test:
 
 ```java
-@SpringBootTest
-@AutoConfigureMockMvc
-class OrderControllerIntegrationTest {
+@Test
+void createOrder_ValidUser_ReturnsCreated() throws Exception {
+    // Mock userClient to return a valid user
+    when(userClient.getUserById(any(UUID.class)))
+        .thenReturn(new UserResponse(
+            UUID.randomUUID(), "test@example.com", "Test", "User",
+            "EMPLOYEE", "ACTIVE", null, null
+        ));
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
-    private UserClient userClient;
-
-    @MockitoBean
-    private ShipmentClient shipmentClient;
-
-    @Test
-    void createOrder_ValidUser_ReturnsCreated() throws Exception {
-        when(userClient.getUserById(any(UUID.class)))
-            .thenReturn(new UserResponse(
-                UUID.randomUUID(), "test@example.com", "Test", "User",
-                "EMPLOYEE", "ACTIVE", null, null
-            ));
-
-        mockMvc.perform(post("/orders")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "userId": "11111111-1111-1111-1111-111111111111",
-                      "productName": "Laptop",
-                      "quantity": 1,
-                      "totalPrice": 999.99,
-                      "shippingAddress": "123 Main St"
-                    }
-                    """))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.status").value("PENDING"));
-    }
+    // Perform POST /orders and verify response
+    mockMvc.perform(post("/orders")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "userId": "11111111-1111-1111-1111-111111111111",
+                  "productName": "Laptop",
+                  "quantity": 1,
+                  "totalPrice": 999.99,
+                  "shippingAddress": "123 Main St"
+                }
+                """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.status").value("PENDING"));
 }
 ```
+
+### 7.3 Run the Test
+
+```bash
+cd order-service
+mvn test -Dtest=OrderControllerIntegrationTest
+```
+
+✅ The test should pass - we're testing order-service in isolation by mocking UserClient.
 
 ---
 
