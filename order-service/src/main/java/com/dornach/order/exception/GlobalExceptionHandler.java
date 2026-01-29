@@ -36,6 +36,22 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ProblemDetail handleUserNotFound(UserNotFoundException ex) {
+        log.warn("User not found: {}", ex.getUserId());
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage()
+        );
+        problem.setTitle("User Not Found");
+        problem.setType(URI.create("https://api.dornach.com/errors/user-not-found"));
+        problem.setProperty("userId", ex.getUserId());
+        problem.setProperty("timestamp", Instant.now());
+
+        return problem;
+    }
+
     @ExceptionHandler(ShipmentServiceException.class)
     public ProblemDetail handleShipmentServiceException(ShipmentServiceException ex) {
         log.error("Shipment service error: {}", ex.getMessage());
