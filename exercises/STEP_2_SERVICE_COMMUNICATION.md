@@ -1,10 +1,16 @@
 # Step 2: Service Communication
 
-> **⚠️ Before starting:** Make sure you have completed Step 1.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-1-complete
-> ```
+---
+
+## Recap: Step 1
+
+In Step 1, you built **user-service** with:
+- **JPA Entity** `User` with annotations and timestamps
+- **DTOs** using Java Records (`CreateUserRequest`, `UpdateUserRequest`, `UserResponse`)
+- **Bean Validation** (`@NotBlank`, `@Email`, `@Size`)
+- **REST Controller** with CRUD endpoints and proper HTTP status codes
+- **Error handling** with RFC 7807 via `GlobalExceptionHandler`
+- **Virtual Threads** enabled for better scalability
 
 ---
 
