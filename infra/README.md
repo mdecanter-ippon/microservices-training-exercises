@@ -4,12 +4,34 @@ This directory contains scripts to configure the Dornach infrastructure with Loc
 
 ## Prerequisites
 
-```bash
-# Install awslocal (LocalStack AWS CLI wrapper)
-pip install awscli-local
+### 1. AWS CLI
 
-# Or use Docker
-docker run --rm -it localstack/localstack-pro
+Install the AWS CLI (required for all platforms):
+
+| Platform | Installation |
+|----------|-------------|
+| **Windows** | `winget install Amazon.AWSCLI` or download from https://aws.amazon.com/cli/ |
+| **macOS** | `brew install awscli` |
+| **Linux** | `pip install awscli` or use your package manager |
+
+### 2. awslocal (Linux/macOS only)
+
+For bash scripts on Linux/macOS:
+```bash
+pip install awscli-local
+```
+
+> **Note:** Windows users don't need `awslocal` - use the PowerShell script (`setup-gateway.ps1`) which uses `aws --endpoint-url` directly.
+
+### 3. LocalStack Auth Token
+
+Set your LocalStack auth token before running `docker-compose`:
+```bash
+# Linux/macOS
+export LOCALSTACK_AUTH_TOKEN="your-token"
+
+# Windows PowerShell
+$env:LOCALSTACK_AUTH_TOKEN="your-token"
 ```
 
 ## Quick Start
@@ -116,12 +138,20 @@ done
 
 ## Scripts
 
-### `setup-gateway.sh`
+### `setup-gateway.sh` (Linux/macOS/Git Bash)
 Creates the API Gateway with all routes and throttling.
 
 **Usage:**
 ```bash
 ./setup-gateway.sh
+```
+
+### `setup-gateway.ps1` (Windows PowerShell)
+Same as above, but for Windows. Uses `aws --endpoint-url` directly instead of `awslocal`.
+
+**Usage:**
+```powershell
+.\setup-gateway.ps1
 ```
 
 ### `test-gateway.sh`
