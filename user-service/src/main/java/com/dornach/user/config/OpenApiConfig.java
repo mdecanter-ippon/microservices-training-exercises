@@ -96,15 +96,13 @@ public class OpenApiConfig {
 
     private ApiResponse createErrorResponse(String title, String description) {
         Example example = new Example();
-        example.setValue("""
-                {
-                  "type": "https://api.dornach.com/errors/error-type",
-                  "title": "%s",
-                  "status": 400,
-                  "detail": "Detailed error message",
-                  "timestamp": "2024-01-15T10:30:00Z"
-                }
-                """.formatted(title));
+        example.setValue(
+                "{\"type\": \"https://api.dornach.com/errors/error-type\", " +
+                "\"title\": \"" + title + "\", " +
+                "\"status\": 400, " +
+                "\"detail\": \"Detailed error message\", " +
+                "\"timestamp\": \"2024-01-15T10:30:00Z\"}"
+        );
 
         MediaType mediaType = new MediaType();
         mediaType.addExamples("default", example);
