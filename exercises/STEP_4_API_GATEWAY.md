@@ -30,8 +30,7 @@ By the end of this exercise, you will:
 - Step 3 completed (OpenAPI documentation working)
 - **Docker** and **Docker Compose** installed
 - **LocalStack Auth Token** (required for API Gateway feature)
-- **awslocal** CLI installed
-- **Bash shell** (for running setup scripts)
+- **AWS CLI** installed (https://aws.amazon.com/cli/)
 
 ### Setup Instructions
 
@@ -50,17 +49,20 @@ $env:LOCALSTACK_AUTH_TOKEN="your-token-here"
 set LOCALSTACK_AUTH_TOKEN=your-token-here
 ```
 
-**2. Install awslocal CLI**
+**2. Install AWS CLI**
 
+- **Windows:** Download from https://aws.amazon.com/cli/ or `winget install Amazon.AWSCLI`
+- **macOS:** `brew install awscli`
+- **Linux:** `pip install awscli` or use your package manager
+
+**3. Install awslocal (Linux/macOS only)**
+
+For bash scripts on Linux/macOS:
 ```bash
 pip install awscli-local
 ```
 
-**3. Bash Shell (Windows only)**
-
-The setup scripts (`setup-gateway.sh`) require a bash shell. On Windows, use one of:
-- **Git Bash** (recommended - comes with Git for Windows): Right-click in folder → "Git Bash Here"
-- **WSL** (Windows Subsystem for Linux): `wsl --install` in PowerShell admin
+> **Note:** Windows users don't need `awslocal` - the PowerShell script uses `aws --endpoint-url` directly.
 
 ---
 
