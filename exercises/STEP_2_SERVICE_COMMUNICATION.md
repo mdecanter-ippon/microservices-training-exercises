@@ -351,7 +351,7 @@ import java.util.UUID;
 public record ShipmentRequest(
     UUID orderId,
     String recipientName,
-    String shippingAddress
+    String recipientAddress
 ) {}
 ```
 
