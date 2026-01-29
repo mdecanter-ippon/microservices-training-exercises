@@ -1,10 +1,16 @@
 # Step 6: M2M Authentication (Machine-to-Machine)
 
-> **⚠️ Before starting:** Make sure you have completed Step 5.
-> If you need to catch up:
-> ```bash
-> git stash && git checkout step-5-complete
-> ```
+---
+
+## Recap: Step 5
+
+In Step 5, you implemented **H2M (Human-to-Machine) authentication**:
+- **Keycloak** configured as Identity Provider with realm "dornach"
+- **JWT tokens** obtained via Resource Owner Password flow
+- **SecurityConfig** with `oauth2ResourceServer` to validate tokens
+- **Protected endpoints** requiring `Authorization: Bearer <token>` header
+- **@AuthenticationPrincipal Jwt** to access user claims in controllers
+- Users `alice` (user role) and `bob` (admin role) for testing
 
 ---
 
