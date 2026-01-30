@@ -444,6 +444,33 @@ curl -X POST http://localhost:8081/users \
 # Should return 400 with RFC 7807 format
 ```
 
+<details>
+<summary><strong>Bruno Collection Reference</strong></summary>
+
+### User Service Requests
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Health Check | GET | `/actuator/health` | Verify service is UP |
+| 2 | List Users | GET | `/users` | List all users (no auth at this step) |
+| 3 | Create User | POST | `/users` | Create user with unique email (timestamp) |
+| 4 | Get User by ID | GET | `/users/{id}` | Retrieve user by ID |
+| 5 | Get User - Not Found | GET | `/users/{non-existent-uuid}` | Test 404 in RFC 7807 format |
+| 6 | Update User | PUT | `/users/{id}` | Update existing user |
+| 7 | Delete User | DELETE | `/users/{id}` | Delete user (204 No Content) |
+| 8 | Validation Error | POST | `/users` | Test validation with invalid data (400 + RFC 7807) |
+
+**Key tests validated:**
+- Full CRUD operations on User Service
+- RFC 7807 format for errors (404, 400)
+- Field validation with structured error messages
+
+**Environment variables used:**
+- `user_service_url`: Service URL (e.g., `http://localhost:8081`)
+- `user_id`: Created user ID (auto-filled after Create User)
+
+</details>
+
 ---
 
 ## Validation Checklist
@@ -475,35 +502,6 @@ In this step, you learned:
 - **Bean Validation** declaratively validates input
 - **RFC 7807** standardizes error responses
 - **Virtual Threads** improve scalability without reactive complexity
-
----
-
-<details>
-<summary><strong>Bruno Collection Reference - Step 1</strong></summary>
-
-### User Service Requests
-
-| # | Request | Method | URL | Description |
-|---|---------|--------|-----|-------------|
-| 1 | Health Check | GET | `/actuator/health` | Verify service is UP |
-| 2 | List Users | GET | `/users` | List all users (no auth at this step) |
-| 3 | Create User | POST | `/users` | Create user with unique email (timestamp) |
-| 4 | Get User by ID | GET | `/users/{id}` | Retrieve user by ID |
-| 5 | Get User - Not Found | GET | `/users/{non-existent-uuid}` | Test 404 in RFC 7807 format |
-| 6 | Update User | PUT | `/users/{id}` | Update existing user |
-| 7 | Delete User | DELETE | `/users/{id}` | Delete user (204 No Content) |
-| 8 | Validation Error | POST | `/users` | Test validation with invalid data (400 + RFC 7807) |
-
-**Key tests validated:**
-- Full CRUD operations on User Service
-- RFC 7807 format for errors (404, 400)
-- Field validation with structured error messages
-
-**Environment variables used:**
-- `user_service_url`: Service URL (e.g., `http://localhost:8081`)
-- `user_id`: Created user ID (auto-filled after Create User)
-
-</details>
 
 ---
 
