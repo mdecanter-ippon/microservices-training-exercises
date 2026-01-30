@@ -474,6 +474,64 @@ In this exercise, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Bonus B</strong></summary>
+
+### Test Sequence
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Create Order (PENDING) | POST | `/orders` | Create order in PENDING status (no SQS event yet) |
+| 2 | Confirm Order (triggers SQS) | POST | `/orders/{id}/confirm` | Confirm order - triggers SQS event to notification-service |
+| 3 | Notification Service Health | GET | `/actuator/health` | Verify notification-service is running |
+| 4 | Check SQS Queue Stats | GET | LocalStack debug endpoint | Check messages in SQS queue |
+
+**Key tests validated:**
+- Two-step order flow: create (PENDING) → confirm (SHIPPED)
+- SQS event published only on confirmation
+- Async processing by notification-service
+- Dead Letter Queue for failed messages
+
+**Expected flow:**
+```
+1. Create Order → PENDING (sync)
+2. Confirm Order → SHIPPED (sync)
+   └── Publish to SQS (async)
+       └── notification-service consumes event
+           └── Logs notification or sends email
+```
+
+**Prerequisites:**
+1. LocalStack running with SQS: `docker-compose up -d localstack`
+2. SQS queue created: `./infra/setup-sqs.sh`
+3. notification-service running
+4. Bob's token available (from Step 5)
+
+**Environment variables used:**
+- `order_service_url`: Order service URL
+- `bob_token`: Admin JWT token
+- `alice_user_id`: Test user ID
+- `order_id`: Created order ID (auto-filled)
+
+**CLI commands for debugging:**
+```bash
+# List queues
+awslocal sqs list-queues
+
+# Check message count
+awslocal sqs get-queue-attributes \
+  --queue-url http://localhost:4566/000000000000/order-events \
+  --attribute-names ApproximateNumberOfMessages
+
+# Check Dead Letter Queue
+awslocal sqs receive-message \
+  --queue-url http://localhost:4566/000000000000/order-events-dlq
+```
+
+</details>
+
+---
+
 ## Congratulations!
 
 You have completed the Microservices Training! You now have hands-on experience with:
