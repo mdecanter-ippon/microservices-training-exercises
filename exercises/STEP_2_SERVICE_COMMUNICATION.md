@@ -705,34 +705,8 @@ void createOrder_InvalidRequest_ReturnsBadRequest() throws Exception {
 
 </details>
 
----
-
-## Validation Checklist
-
-Before moving to Step 3, verify:
-
-- [ ] `RestClientConfig` creates both `userRestClient` and `shipmentRestClient`
-- [ ] `UserClient` validates users on order creation
-- [ ] `ShipmentClient` creates shipments on order confirmation
-- [ ] `POST /orders` validates user exists first
-- [ ] `POST /orders/{id}/confirm` creates a shipment and returns tracking number
-- [ ] Retry works: stop a service, see retry attempts in logs
-- [ ] Tests pass: `mvn test`
-
----
-
-## Summary
-
-In this step, you learned:
-- **RestClient** (Spring 6) provides a modern, fluent API for HTTP calls
-- **Interface-based clients** improve testability and decoupling
-- **Resilience4j** adds retry and timeout to handle network failures
-- **Service orchestration** coordinates calls between multiple services
-
----
-
 <details>
-<summary><strong>Bruno Collection Reference - Step 2</strong></summary>
+<summary><strong>Bruno Collection Reference</strong></summary>
 
 ### Order Service Requests
 
@@ -764,6 +738,30 @@ In this step, you learned:
 - `user_id`: User ID for orders
 
 </details>
+
+---
+
+## Validation Checklist
+
+Before moving to Step 3, verify:
+
+- [ ] `RestClientConfig` creates both `userRestClient` and `shipmentRestClient`
+- [ ] `UserClient` validates users on order creation
+- [ ] `ShipmentClient` creates shipments on order confirmation
+- [ ] `POST /orders` validates user exists first
+- [ ] `POST /orders/{id}/confirm` creates a shipment and returns tracking number
+- [ ] Retry works: stop a service, see retry attempts in logs
+- [ ] Tests pass: `mvn test`
+
+---
+
+## Summary
+
+In this step, you learned:
+- **RestClient** (Spring 6) provides a modern, fluent API for HTTP calls
+- **Interface-based clients** improve testability and decoupling
+- **Resilience4j** adds retry and timeout to handle network failures
+- **Service orchestration** coordinates calls between multiple services
 
 ---
 
