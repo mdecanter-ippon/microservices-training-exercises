@@ -20,6 +20,7 @@ By the end of this exercise, you will:
 - Secure Spring Boot services with JWT tokens
 - Obtain tokens and call protected endpoints
 - Decode and inspect JWT tokens
+- Document security requirements in OpenAPI with `@SecurityScheme`
 
 ---
 
@@ -455,11 +456,148 @@ All should return `HTTP 200 OK`.
 
 ---
 
-## Exercise 6: Access User Information in Code
+## Exercise 6: Document Security in OpenAPI
+
+In Step 3, you added OpenAPI documentation with springdoc-openapi. Now that security is configured, you should document the authentication requirements in your API specification. This enables Swagger UI to show a login button and automatically include tokens in requests.
+
+**File:** `user-service/src/main/java/com/dornach/user/config/OpenApiConfig.java`
+
+### 6.1 Add @SecurityScheme Annotation
+
+Add the `@SecurityScheme` annotation to your `OpenApiConfig` class to define the Bearer token authentication:
+
+```java
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+
+@Configuration
+@OpenAPIDefinition(
+    info = @Info(
+        title = "User Service API",
+        version = "1.0",
+        description = "User management API for the Dornach platform"
+    )
+)
+@SecurityScheme(
+    name = "bearerAuth",
+    type = SecuritySchemeType.HTTP,
+    scheme = "bearer",
+    bearerFormat = "JWT",
+    description = "JWT token obtained from Keycloak. Use the token endpoint: POST /realms/dornach/protocol/openid-connect/token"
+)
+public class OpenApiConfig {
+}
+```
+
+<details>
+<summary>💡 Explanation of @SecurityScheme attributes</summary>
+
+| Attribute | Value | Description |
+|-----------|-------|-------------|
+| `name` | `bearerAuth` | Reference name used by `@SecurityRequirement` |
+| `type` | `HTTP` | Standard HTTP authentication |
+| `scheme` | `bearer` | Bearer token scheme (RFC 6750) |
+| `bearerFormat` | `JWT` | Indicates the token format (informational) |
+| `description` | ... | Helps developers understand how to get a token |
+
+</details>
+
+### 6.2 Apply Security to All Operations
+
+To require authentication for all endpoints by default, add `@SecurityRequirement` to the `@OpenAPIDefinition`:
+
+```java
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
+@Configuration
+@OpenAPIDefinition(
+    info = @Info(
+        title = "User Service API",
+        version = "1.0",
+        description = "User management API for the Dornach platform"
+    ),
+    security = @SecurityRequirement(name = "bearerAuth")
+)
+@SecurityScheme(
+    name = "bearerAuth",
+    type = SecuritySchemeType.HTTP,
+    scheme = "bearer",
+    bearerFormat = "JWT",
+    description = "JWT token obtained from Keycloak"
+)
+public class OpenApiConfig {
+}
+```
+
+This adds a global security requirement - all endpoints will show a lock icon in Swagger UI.
+
+### 6.3 Mark Public Endpoints (Optional)
+
+For endpoints that don't require authentication (like health checks), you can override the global security:
+
+```java
+@GetMapping("/public-endpoint")
+@Operation(
+    summary = "Public endpoint",
+    security = {}  // Empty array = no security required
+)
+public String publicEndpoint() {
+    return "Hello, World!";
+}
+```
+
+### 6.4 Test in Swagger UI
+
+1. Open http://localhost:8081/swagger-ui.html
+2. Notice the **Authorize** button (top-right)
+3. Click it and enter your JWT token (without "Bearer " prefix)
+4. Click **Authorize**
+5. Now all requests from Swagger UI will include the token
+
+**Getting a token for Swagger UI:**
+```bash
+TOKEN=$(curl -s -X POST "http://localhost:8080/realms/dornach/protocol/openid-connect/token" \
+  -d "client_id=dornach-web" \
+  -d "username=alice" \
+  -d "password=alice123" \
+  -d "grant_type=password" | jq -r '.access_token')
+
+echo $TOKEN
+```
+
+Copy the token and paste it in Swagger UI's Authorize dialog.
+
+### 6.5 Apply to Other Services
+
+Add the same `@SecurityScheme` and `@SecurityRequirement` annotations to `order-service` and `shipment-service` OpenApiConfig classes.
+
+### 6.6 Verify OpenAPI Spec
+
+Check that the security is documented in the generated spec:
+
+```bash
+curl -s http://localhost:8081/v3/api-docs | jq '.components.securitySchemes'
+```
+
+**Expected output:**
+```json
+{
+  "bearerAuth": {
+    "type": "http",
+    "description": "JWT token obtained from Keycloak",
+    "scheme": "bearer",
+    "bearerFormat": "JWT"
+  }
+}
+```
+
+---
+
+## Exercise 7: Access User Information in Code
 
 **File:** `user-service/src/main/java/com/dornach/user/controller/UserController.java`
 
-### 6.1 Add a "Who Am I" Endpoint
+### 7.1 Add a "Who Am I" Endpoint
 
 Add this method to `UserController`:
 
@@ -480,7 +618,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 ```
 
-### 6.2 Test the Endpoint
+### 7.2 Test the Endpoint
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8081/users/me
@@ -855,6 +993,8 @@ Before moving to Step 6, verify:
 - [ ] `GET /users` with valid token returns 200
 - [ ] `GET /actuator/health` works without token
 - [ ] All three services (user, order, shipment) are secured
+- [ ] OpenAPI spec includes `securitySchemes` with `bearerAuth`
+- [ ] Swagger UI shows **Authorize** button
 - [ ] Bruno "Step 5 - H2M Authentication" tests pass
 
 ---
