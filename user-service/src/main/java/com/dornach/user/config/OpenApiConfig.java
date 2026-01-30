@@ -1,12 +1,9 @@
 package com.dornach.user.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.Content;
@@ -35,9 +32,6 @@ import java.util.Map;
                         - User CRUD operations
                         - Role-based access control (RBAC)
                         - User status management
-
-                        ## Authentication
-                        All endpoints (except health checks) require a valid JWT token obtained from Keycloak.
                         """,
                 contact = @Contact(
                         name = "Dornach Engineering Team",
@@ -53,15 +47,7 @@ import java.util.Map;
                 @Server(url = "http://localhost:8081", description = "Local Development"),
                 @Server(url = "http://localhost:4566", description = "API Gateway (LocalStack)"),
                 @Server(url = "https://api.dornach.com", description = "Production")
-        },
-        security = @SecurityRequirement(name = "bearerAuth")
-)
-@SecurityScheme(
-        name = "bearerAuth",
-        type = SecuritySchemeType.HTTP,
-        scheme = "bearer",
-        bearerFormat = "JWT",
-        description = "JWT token obtained from Keycloak. Format: `Bearer <token>`"
+        }
 )
 public class OpenApiConfig {
 
