@@ -78,27 +78,27 @@ You should see the Zipkin UI with a search form.
 
 ## Exercise 2: Add Tracing Dependencies
 
-**Files:** All service `pom.xml`
+**File:** Parent `pom.xml` (root of project)
 
-### 2.1 Verify Dependencies
+### 2.1 Add Dependencies to Parent POM
 
-Check that each service has these dependencies:
+Add these dependencies to the **parent pom.xml** (not individual services). This ensures all services inherit them:
 
 ```xml
-<!-- Micrometer Tracing Bridge -->
+<!-- Distributed Tracing -->
 <dependency>
     <groupId>io.micrometer</groupId>
     <artifactId>micrometer-tracing-bridge-otel</artifactId>
 </dependency>
-
-<!-- Zipkin Exporter -->
 <dependency>
     <groupId>io.opentelemetry</groupId>
     <artifactId>opentelemetry-exporter-zipkin</artifactId>
 </dependency>
 ```
 
-If missing, add them and rebuild.
+Add them in the `<dependencies>` section, after the existing dependencies.
+
+> **Note:** Adding to the parent POM means all services automatically get these dependencies without modifying each service's pom.xml.
 
 ---
 
@@ -126,15 +126,19 @@ management:
 
 </details>
 
-### 3.2 Add Log Correlation Pattern
+### 3.2 Verify Log Correlation Pattern
+
+Check that this pattern is present in each service's `application.yaml` (it may already be there):
 
 ```yaml
 logging:
   pattern:
-    correlation: "[${spring.application.name},%X{traceId:-},%X{spanId:-}]"
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 ```
 
 This adds service name, trace ID, and span ID to every log line.
+
+> **Note:** If already present, no changes needed. The pattern enables log correlation with traces.
 
 ### 3.3 Restart All Services
 
