@@ -31,6 +31,9 @@ QUICK_START_*.md
 # Training answers (instructor only)
 exercises/ANSWERS.md
 
+# Instructor notes (instructor only)
+instructor_notes/
+
 # Maven
 .mvn/wrapper/maven-wrapper.jar
 
