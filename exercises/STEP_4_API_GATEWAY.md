@@ -466,34 +466,6 @@ curl $GATEWAY/users
 curl $GATEWAY/shipments
 ```
 
----
-
-## Validation Checklist
-
-Before moving to Step 5, verify:
-
-- [ ] LocalStack is running (`docker-compose up -d localstack`)
-- [ ] Gateway setup script executes successfully
-- [ ] `$GATEWAY/users` returns the same data as `localhost:8081/users`
-- [ ] `$GATEWAY/users/{id}` returns a single user (path forwarding works)
-- [ ] `$GATEWAY/orders` routes correctly to order-service
-- [ ] `$GATEWAY/shipments` routes correctly to shipment-service
-- [ ] Bruno "Step 4 - API Gateway" tests pass
-- [ ] (Optional, LocalStack Pro) Rate limiting works (429 returned when limit exceeded)
-
----
-
-## Summary
-
-In this step, you learned:
-- **API Gateway** provides a single entry point for multiple services
-- **HTTP API v2** is lightweight and cost-effective
-- **Path-based routing** directs requests to appropriate backends
-- **Rate limiting** protects services from abuse (Token Bucket algorithm)
-- **LocalStack** emulates AWS services locally for development
-
----
-
 <details>
 <summary><strong>Bruno Collection Reference - Step 4</strong></summary>
 
@@ -526,6 +498,32 @@ Subfolders for each service with Health Check, OpenAPI Spec, and List endpoints.
 - `gateway`: Full gateway URL (computed with api_id)
 
 </details>
+
+---
+
+## Validation Checklist
+
+Before moving to Step 5, verify:
+
+- [ ] LocalStack is running (`docker-compose up -d localstack`)
+- [ ] Gateway setup script executes successfully
+- [ ] `$GATEWAY/users` returns the same data as `localhost:8081/users`
+- [ ] `$GATEWAY/users/{id}` returns a single user (path forwarding works)
+- [ ] `$GATEWAY/orders` routes correctly to order-service
+- [ ] `$GATEWAY/shipments` routes correctly to shipment-service
+- [ ] Bruno "Step 4 - API Gateway" tests pass
+- [ ] (Optional, LocalStack Pro) Rate limiting works (429 returned when limit exceeded)
+
+---
+
+## Summary
+
+In this step, you learned:
+- **API Gateway** provides a single entry point for multiple services
+- **HTTP API v2** is lightweight and cost-effective
+- **Path-based routing** directs requests to appropriate backends
+- **Rate limiting** protects services from abuse (Token Bucket algorithm)
+- **LocalStack** emulates AWS services locally for development
 
 ---
 
