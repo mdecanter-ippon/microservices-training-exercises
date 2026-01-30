@@ -21,7 +21,7 @@ For bash scripts on Linux/macOS:
 pip install awscli-local
 ```
 
-> **Note:** Windows users don't need `awslocal` - use the PowerShell script (`setup-gateway.ps1`) which uses `aws --endpoint-url` directly.
+> **Note:** Windows users don't need `awslocal` - use the PowerShell scripts in the `windows/` subdirectory which use `aws --endpoint-url` directly.
 
 ### 3. LocalStack Auth Token
 
@@ -138,47 +138,54 @@ done
 
 ## Scripts
 
-### `setup-gateway.sh` (Linux/macOS/Git Bash)
+All scripts are available in two versions:
+- **Bash** (Linux/macOS/Git Bash): Located in `infra/`
+- **PowerShell** (Windows): Located in `infra/windows/`
+
+### Setup API Gateway
+
 Creates the API Gateway with all routes and throttling.
 
-**Usage:**
-```bash
-./setup-gateway.sh
-```
+| Platform | Command |
+|----------|---------|
+| Linux/macOS | `./setup-gateway.sh` |
+| Windows | `.\windows\setup-gateway.ps1` |
 
-### `setup-gateway.ps1` (Windows PowerShell)
-Same as above, but for Windows. Uses `aws --endpoint-url` directly instead of `awslocal`.
+### Test Gateway
 
-**Usage:**
-```powershell
-.\setup-gateway.ps1
-```
-
-### `test-gateway.sh`
 Tests routing and rate limiting.
 
-**Usage:**
-```bash
-export DORNACH_API_ID=<your-api-id>
-./test-gateway.sh
-```
+| Platform | Command |
+|----------|---------|
+| Linux/macOS | `export DORNACH_API_ID=<id>` then `./test-gateway.sh` |
+| Windows | `$env:DORNACH_API_ID="<id>"` then `.\windows\test-gateway.ps1` |
 
-### `cleanup-gateway.sh`
+### Cleanup Gateway
+
 Deletes the API Gateway.
 
-**Usage:**
-```bash
-export DORNACH_API_ID=<your-api-id>
-./cleanup-gateway.sh
-```
+| Platform | Command |
+|----------|---------|
+| Linux/macOS | `export DORNACH_API_ID=<id>` then `./cleanup-gateway.sh` |
+| Windows | `$env:DORNACH_API_ID="<id>"` then `.\windows\cleanup-gateway.ps1` |
 
-### `setup-keycloak.sh`
+### Setup Keycloak
+
 Configures Keycloak realm, clients, and users.
 
-**Usage:**
-```bash
-./setup-keycloak.sh
-```
+| Platform | Command |
+|----------|---------|
+| Linux/macOS | `./setup-keycloak.sh` |
+| Windows | `.\windows\setup-keycloak.ps1` |
+
+### Setup SQS (Bonus B)
+
+Creates SQS queues for async messaging.
+
+| Platform | Command |
+|----------|---------|
+| Linux/macOS | `./setup-sqs.sh` |
+| Windows | `.\windows\setup-sqs.ps1` |
 
 ## Troubleshooting
 
