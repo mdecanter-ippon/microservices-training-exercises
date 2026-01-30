@@ -1,0 +1,42 @@
+meta {
+  name: 3. Get Bob Token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{keycloak_url}}/realms/dornach/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  client_id: dornach-web
+  username: bob
+  password: bob123
+  grant_type: password
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("bob_token", res.getBody().access_token);
+  }
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has access_token", function() {
+    expect(res.getBody().access_token).to.be.a("string");
+  });
+}
+
+docs {
+  Get H2M token for Bob (admin role).
+
+  Bob has the "admin" role, so he CAN create shipments (RBAC allows admin OR service-caller).
+
+  The token is saved to bob_token environment variable.
+}
