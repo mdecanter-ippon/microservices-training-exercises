@@ -1,0 +1,45 @@
+meta {
+  name: 0c. Create Test User
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{user_service_url}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bob_token}}
+}
+
+body:json {
+  {
+    "email": "tracing-test@dornach.com",
+    "firstName": "Tracing",
+    "lastName": "Test",
+    "role": "EMPLOYEE"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("user_id", res.getBody().id);
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Response has user id", function() {
+    expect(res.getBody().id).to.be.a("string");
+  });
+}
+
+docs {
+  Create a test user for tracing tests.
+  The user ID is saved to user_id environment variable.
+}
