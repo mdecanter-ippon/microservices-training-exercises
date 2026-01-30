@@ -6,10 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.dornach</groupId>
-    <artifactId>microservices-parent</artifactId>
+    <artifactId>microservices-training</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Dornach Microservices Parent</name>
+    <name>Dornach Microservices Training</name>
     <description>Cloud-Native Microservices Training for Dornach</description>
 
     <parent>
