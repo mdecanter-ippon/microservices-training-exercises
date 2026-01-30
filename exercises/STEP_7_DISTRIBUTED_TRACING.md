@@ -376,6 +376,53 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 7</strong></summary>
+
+### Recommended Test Sequence
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Get Alice Token | POST | `/realms/dornach/.../token` | Get H2M token for Alice, saved to `alice_token` |
+| 2 | Get Bob Token | POST | `/realms/dornach/.../token` | Get H2M token for Bob (admin), saved to `bob_token` |
+| 3 | Create Test User | POST | `/users` | Create test user for tracing, ID saved to `user_id` |
+| 4 | Simple Trace - Get User | GET | `/users/{id}` | Single-service trace (user-service only) |
+| 5 | Distributed Trace - Create Order | POST | `/orders` | Multi-service trace: order → user → shipment |
+| 6 | Check Zipkin Health | GET | `/health` | Verify Zipkin is running |
+
+**Key tests validated:**
+- Single-service trace visible in Zipkin
+- Distributed trace across 3 services with same Trace ID
+- Log correlation with traceId/spanId
+- Automatic context propagation via RestClient
+
+**After running tests:**
+1. Open Zipkin: http://localhost:9411
+2. Select `serviceName: order-service`
+3. Click "Run Query"
+4. Find trace with multiple spans
+5. Click to see distributed trace timeline
+
+**Expected trace for Create Order:**
+```
+order-service (parent span)
+├── user-service (validate user)
+└── shipment-service (create shipment)
+```
+
+**Prerequisites:**
+1. Zipkin running: `docker-compose up -d zipkin`
+2. All services running with tracing config
+3. Keycloak configured (for tokens)
+
+**Environment variables used:**
+- `alice_token`, `bob_token`: JWT tokens
+- `user_id`: Test user ID for tracing
+
+</details>
+
+---
+
 ## Key Concepts
 
 | Concept | Description |
