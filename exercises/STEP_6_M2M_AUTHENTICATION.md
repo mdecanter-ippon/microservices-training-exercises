@@ -62,9 +62,16 @@ When `order-service` calls `shipment-service`:
 
 The setup script already creates the M2M client. Re-run it to ensure everything is configured:
 
+**Linux/macOS/Git Bash:**
 ```bash
 cd infra
 ./setup-keycloak.sh
+```
+
+**Windows PowerShell:**
+```powershell
+cd infra\windows
+.\setup-keycloak.ps1
 ```
 
 Look for these lines in the output:
