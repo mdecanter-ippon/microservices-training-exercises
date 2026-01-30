@@ -134,13 +134,13 @@ echo $ALICE_TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq
 
 ## Exercise 3: Configure OAuth2 Client in order-service
 
-**Files:**
+**Files to modify:**
 - `order-service/src/main/resources/application.yaml`
 - `order-service/src/main/java/com/dornach/order/config/RestClientConfig.java`
 
-### 3.1 Add Client Configuration
+### 3.1 Add OAuth2 Client Configuration
 
-In `application.yaml`:
+Add the following under the existing `spring.security.oauth2` section in `application.yaml`:
 
 ```yaml
 spring:
@@ -168,9 +168,9 @@ spring:
 
 </details>
 
-### 3.2 Create OAuth2 Client Manager
+### 3.2 Add OAuth2 Client Manager Bean
 
-In `RestClientConfig.java`:
+Add the following bean to `RestClientConfig.java`:
 
 ```java
 @Bean
@@ -194,7 +194,9 @@ public OAuth2AuthorizedClientManager authorizedClientManager(
 }
 ```
 
-### 3.3 Add Interceptor to RestClient
+### 3.3 Modify shipmentRestClient to Use OAuth2 Interceptor
+
+Modify the existing `shipmentRestClient` bean to inject the `OAuth2AuthorizedClientManager` and add the interceptor:
 
 ```java
 @Bean
@@ -223,7 +225,7 @@ The interceptor automatically:
 
 ## Exercise 4: Protect shipment-service with RBAC
 
-**File:** `shipment-service/src/main/java/com/dornach/shipment/config/SecurityConfig.java`
+**File to modify:** `shipment-service/src/main/java/com/dornach/shipment/config/SecurityConfig.java`
 
 ### 4.1 Enable Method Security
 
@@ -243,35 +245,69 @@ Keycloak stores roles in `realm_access.roles`. Spring Security needs a converter
 ```java
 @Bean
 public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter =
-            new JwtGrantedAuthoritiesConverter();
-    grantedAuthoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
-    grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
+    return converter;
+}
 
-    JwtAuthenticationConverter jwtAuthenticationConverter =
-            new JwtAuthenticationConverter();
-    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(
-            jwt -> {
-                Map<String, Object> realmAccess = jwt.getClaim("realm_access");
-                if (realmAccess == null) return List.of();
-                List<String> roles = (List<String>) realmAccess.get("roles");
-                if (roles == null) return List.of();
-                return roles.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                        .collect(Collectors.toList());
-            }
-    );
+static class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
+    @Override
+    public Collection<GrantedAuthority> convert(Jwt jwt) {
+        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+        if (realmAccess == null || realmAccess.get("roles") == null) {
+            return List.of();
+        }
 
-    return jwtAuthenticationConverter;
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) realmAccess.get("roles");
+
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .collect(Collectors.toList());
+    }
 }
 ```
 
-### 4.3 Protect Endpoint with @PreAuthorize
+### 4.3 Wire the Converter to SecurityFilterChain
 
-In `ShipmentController.java`:
+**Important:** The converter must be explicitly wired to the JWT configuration:
+
+```java
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    return http
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(authz -> authz
+            .requestMatchers("/actuator/**").permitAll()
+            .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+            .anyRequest().authenticated()
+        )
+        .oauth2ResourceServer(oauth2 -> oauth2
+            .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+        .build();
+}
+```
+
+<details>
+<summary>💡 Why is this step necessary?</summary>
+
+Creating the `JwtAuthenticationConverter` bean is not enough - Spring Security's OAuth2 resource server uses defaults unless you explicitly configure it. The `.jwt(jwt -> jwt.jwtAuthenticationConverter(...))` line tells Spring to use your custom converter instead of the default one.
+
+Without this, roles from `realm_access.roles` won't be extracted and RBAC with `@PreAuthorize` won't work.
+
+</details>
+
+### 4.4 Protect Endpoint with @PreAuthorize
+
+**File:** `shipment-service/src/main/java/com/dornach/shipment/controller/ShipmentController.java`
 
 ```java
 @PostMapping
+@Operation(summary = "Create a new shipment")
+@ApiResponse(responseCode = "201", description = "Shipment created successfully")
+@ApiResponse(responseCode = "400", description = "Validation error")
+@ApiResponse(responseCode = "403", description = "Access denied - requires service-caller or admin role")
 @PreAuthorize("hasRole('service-caller') or hasRole('admin')")
 public ResponseEntity<ShipmentResponse> createShipment(
         @Valid @RequestBody CreateShipmentRequest request) {
@@ -282,7 +318,7 @@ public ResponseEntity<ShipmentResponse> createShipment(
 This allows:
 - M2M calls (service-caller role) - ALLOWED
 - Admin users (admin role) - ALLOWED
-- Regular users (user role) - DENIED
+- Regular users (user role) - DENIED (403 Forbidden)
 
 ---
 
