@@ -258,6 +258,41 @@ The interceptor automatically:
 2. Adds `Authorization: Bearer <token>` to every request
 3. Refreshes the token when it expires
 
+### 3.4 Apply the Same Pattern to userRestClient
+
+Since user-service also requires authentication (from Step 5), apply the same OAuth2 interceptor pattern to `userRestClient`:
+
+```java
+@Bean
+public RestClient userRestClient(
+        RestClient.Builder builder,
+        OAuth2AuthorizedClientManager authorizedClientManager) {
+
+    return builder
+            .baseUrl(userServiceUrl)
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .requestInterceptor((request, body, execution) -> {
+                OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
+                        .withClientRegistrationId("shipment-service")
+                        .principal("order-service")
+                        .build();
+
+                OAuth2AuthorizedClient authorizedClient =
+                        authorizedClientManager.authorize(authorizeRequest);
+
+                if (authorizedClient != null) {
+                    String token = authorizedClient.getAccessToken().getTokenValue();
+                    request.getHeaders().setBearerAuth(token);
+                }
+
+                return execution.execute(request, body);
+            })
+            .build();
+}
+```
+
+> **Note:** We reuse the same client registration "shipment-service" since the M2M token works for all authenticated services.
+
 ---
 
 ## Exercise 4: Protect shipment-service with RBAC
@@ -356,6 +391,35 @@ This allows:
 - M2M calls (service-caller role) - ALLOWED
 - Admin users (admin role) - ALLOWED
 - Regular users (user role) - DENIED (403 Forbidden)
+
+### 4.5 Handle AccessDeniedException in GlobalExceptionHandler
+
+**File to modify:** `shipment-service/src/main/java/com/dornach/shipment/exception/GlobalExceptionHandler.java`
+
+The default `@ExceptionHandler(Exception.class)` will catch `AccessDeniedException` and return 500 instead of 403. Add a specific handler:
+
+```java
+import org.springframework.security.access.AccessDeniedException;
+
+// ... existing handlers ...
+
+@ExceptionHandler(AccessDeniedException.class)
+public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+    log.warn("Access denied: {}", ex.getMessage());
+
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.FORBIDDEN,
+            "You don't have permission to perform this action"
+    );
+    problem.setTitle("Access Denied");
+    problem.setType(URI.create("https://api.dornach.com/errors/access-denied"));
+    problem.setProperty("timestamp", Instant.now());
+
+    return problem;
+}
+```
+
+> **Important:** Place this handler BEFORE the generic `@ExceptionHandler(Exception.class)` so it catches security exceptions first.
 
 ---
 
