@@ -1,7 +1,7 @@
 meta {
-  name: 3. Create Shipment - Alice Token (403)
+  name: 5. Create Shipment - Alice Token (403)
   type: http
-  seq: 3
+  seq: 5
 }
 
 post {
@@ -31,9 +31,9 @@ tests {
 docs {
   Try to create shipment with Alice's H2M token.
 
-  Before running: Get Alice's token from Step 5
+  Before running: Run request "2. Get Alice Token" first
 
-  Expected: 403 Forbidden - Alice has "user" role, not "service-caller"
+  Expected: 403 Forbidden - Alice has "user" role, not "service-caller" or "admin"
 
   This demonstrates RBAC: only services (M2M) or admins can create shipments.
 }
