@@ -868,6 +868,49 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 5</strong></summary>
+
+### Recommended Test Sequence
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Get Token - Alice | POST | `/realms/dornach/.../token` | Get JWT for Alice (role: user), saved to `alice_token` |
+| 2 | Get Token - Bob | POST | `/realms/dornach/.../token` | Get JWT for Bob (role: admin), saved to `bob_token` |
+| 3 | List Users - No Token (401) | GET | `/users` | Verify access denied without token (401 Unauthorized) |
+| 4 | List Users - With Token | GET | `/users` | With Alice's token, access is allowed (200 OK) |
+| 5 | Create User - With Token | POST | `/users` | Create user with Bob's token (admin) |
+
+### Other Available Requests
+
+- **List Orders (with Bob token)** - Test order-service access with JWT
+- **List Shipments (with Alice token)** - Test shipment-service access with JWT
+
+**Key tests validated:**
+- Password Flow authentication (Resource Owner Password Credentials)
+- Rejection of requests without token (401)
+- Acceptance of requests with valid token (200)
+- JWT token automatically saved for reuse
+
+**Prerequisites:**
+1. Keycloak running: `docker-compose up -d keycloak`
+2. Realm configured: `./infra/setup-keycloak.sh`
+
+**Environment variables used:**
+- `keycloak_url`: Keycloak URL (e.g., `http://localhost:8080`)
+- `alice_token`: Alice's JWT token (auto-filled)
+- `bob_token`: Bob's JWT token (auto-filled)
+
+**Preconfigured users:**
+| User | Password | Role |
+|------|----------|------|
+| alice | alice123 | user |
+| bob | bob123 | admin |
+
+</details>
+
+---
+
 ## Before Moving On
 
 Make sure you're ready for Step 6:
