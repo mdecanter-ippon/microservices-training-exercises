@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -68,6 +69,21 @@ public class GlobalExceptionHandler {
         problem.setTitle("Validation Error");
         problem.setType(URI.create("https://api.dornach.com/errors/validation-error"));
         problem.setProperty("fieldErrors", fieldErrors);
+        problem.setProperty("timestamp", Instant.now());
+
+        return problem;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "You don't have permission to perform this action"
+        );
+        problem.setTitle("Access Denied");
+        problem.setType(URI.create("https://api.dornach.com/errors/access-denied"));
         problem.setProperty("timestamp", Instant.now());
 
         return problem;
