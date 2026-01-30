@@ -550,6 +550,43 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 6</strong></summary>
+
+### Recommended Test Sequence
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Get M2M Token | POST | `/realms/dornach/.../token` | Get M2M token via Client Credentials flow, saved to `m2m_token` |
+| 2 | Create Shipment - M2M Token (201) | POST | `/shipments` | Create shipment with M2M token - succeeds (service-caller role) |
+| 3 | Create Shipment - Alice Token (403) | POST | `/shipments` | Try with Alice's H2M token - fails (user role, not service-caller) |
+| 4 | Create Shipment - Bob Token (201) | POST | `/shipments` | Create with Bob's token - succeeds (admin role allowed) |
+
+**Key tests validated:**
+- Client Credentials flow (no username/password, just client_id + secret)
+- RBAC enforcement: M2M token with `service-caller` role → 201
+- RBAC enforcement: H2M token with `user` role → 403 Forbidden
+- Admin bypass: Bob's token with `admin` role → 201
+
+**Prerequisites:**
+1. Keycloak running with M2M client configured
+2. Step 5 completed (need Alice's token for comparison test)
+
+**Environment variables used:**
+- `keycloak_url`: Keycloak URL (e.g., `http://localhost:8080`)
+- `m2m_token`: M2M JWT token (auto-filled)
+- `alice_token`: Alice's H2M token (from Step 5)
+- `bob_token`: Bob's H2M token (from Step 5)
+
+**M2M Client credentials:**
+| Client ID | Client Secret | Role |
+|-----------|---------------|------|
+| order-service-client | order-service-secret | service-caller |
+
+</details>
+
+---
+
 ## Before Moving On
 
 Make sure you're ready for Step 7:
