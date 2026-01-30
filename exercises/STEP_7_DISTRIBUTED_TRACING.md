@@ -347,35 +347,6 @@ Run the "Create Full Order" request, then:
 2. Find the trace
 3. Verify it shows all three services
 
----
-
-## Validation Checklist
-
-Before moving to Bonus exercises, verify:
-
-- [ ] Zipkin is running at http://localhost:9411
-- [ ] All services have tracing configuration
-- [ ] Logs show `[serviceName,traceId,spanId]` format
-- [ ] Simple request creates a trace visible in Zipkin
-- [ ] Order creation creates a distributed trace with 3+ spans
-- [ ] All spans in a distributed trace share the same Trace ID
-- [ ] Error traces show the failing service clearly
-- [ ] Bruno "Step 7 - Distributed Tracing" tests pass
-
----
-
-## Summary
-
-In this step, you learned:
-- **Trace ID** uniquely identifies a request across all services
-- **Span** represents a single operation (HTTP call, DB query)
-- **Micrometer Tracing** auto-configures with Spring Boot
-- **Context propagation** happens automatically via `traceparent` header
-- **Zipkin** visualizes traces with timelines and spans
-- **Log correlation** links logs to traces via Trace ID
-
----
-
 <details>
 <summary><strong>Bruno Collection Reference - Step 7</strong></summary>
 
@@ -420,6 +391,33 @@ order-service (parent span)
 - `user_id`: Test user ID for tracing
 
 </details>
+
+---
+
+## Validation Checklist
+
+Before moving to Bonus exercises, verify:
+
+- [ ] Zipkin is running at http://localhost:9411
+- [ ] All services have tracing configuration
+- [ ] Logs show `[serviceName,traceId,spanId]` format
+- [ ] Simple request creates a trace visible in Zipkin
+- [ ] Order creation creates a distributed trace with 3+ spans
+- [ ] All spans in a distributed trace share the same Trace ID
+- [ ] Error traces show the failing service clearly
+- [ ] Bruno "Step 7 - Distributed Tracing" tests pass
+
+---
+
+## Summary
+
+In this step, you learned:
+- **Trace ID** uniquely identifies a request across all services
+- **Span** represents a single operation (HTTP call, DB query)
+- **Micrometer Tracing** auto-configures with Spring Boot
+- **Context propagation** happens automatically via `traceparent` header
+- **Zipkin** visualizes traces with timelines and spans
+- **Log correlation** links logs to traces via Trace ID
 
 ---
 
