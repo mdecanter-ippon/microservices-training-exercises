@@ -27,7 +27,7 @@ spring:
           shipment-service:
             provider: keycloak
             client-id: order-service-client
-            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret-change-in-production}
+            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret}
             authorization-grant-type: client_credentials
             scope: openid
         provider:
@@ -50,6 +50,12 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  tracing:
+    sampling:
+      probability: 1.0  # Trace 100% of requests (dev only)
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
 
 logging:
   pattern:
@@ -102,7 +108,7 @@ spring:
           shipment-service:
             provider: keycloak
             client-id: order-service-client
-            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret-change-in-production}
+            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret}
             authorization-grant-type: client_credentials
             scope: openid
         provider:

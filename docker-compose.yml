@@ -23,6 +23,14 @@ services:
     networks:
       - dornach-network
 
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - dornach-network
+
   postgres:
     image: postgres:16-alpine
     container_name: postgres
