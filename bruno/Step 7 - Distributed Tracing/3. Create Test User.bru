@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "email": "tracing-test@dornach.com",
+    "email": "tracing-{{$timestamp}}@dornach.com",
     "firstName": "Tracing",
     "lastName": "Test",
     "role": "EMPLOYEE"
@@ -41,5 +41,6 @@ tests {
 
 docs {
   Create a test user for tracing tests.
+  Uses timestamp in email to ensure unique user each run.
   The user ID is saved to user_id environment variable.
 }
