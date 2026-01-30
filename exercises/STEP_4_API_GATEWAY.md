@@ -141,7 +141,7 @@ cd order-service && mvn spring-boot:run
 
 **Files:**
 - `infra/setup-gateway.sh` (Linux/macOS/Git Bash)
-- `infra/setup-gateway.ps1` (Windows PowerShell)
+- `infra/windows/setup-gateway.ps1` (Windows PowerShell)
 
 ### 2.1 Understand the Setup Script
 
@@ -169,7 +169,7 @@ cd infra
 
 **Windows PowerShell:**
 ```powershell
-cd infra
+cd infra\windows
 .\setup-gateway.ps1
 ```
 
