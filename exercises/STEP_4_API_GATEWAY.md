@@ -494,6 +494,41 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 4</strong></summary>
+
+### Gateway Tests (Single Entry Point)
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | List Users via Gateway | GET | `/users` | Verify routing to user-service |
+| 2 | Create User via Gateway | POST | `/users` | Test POST requests through gateway |
+| 3 | List Orders via Gateway | GET | `/orders` | Verify routing to order-service |
+| 4 | List Shipments via Gateway | GET | `/shipments` | Verify routing to shipment-service |
+| 5 | Unknown Route - 404 | GET | `/unknown` | Verify unconfigured routes return 404 |
+
+### Direct Service Tests (comparison)
+
+Subfolders for each service with Health Check, OpenAPI Spec, and List endpoints.
+
+**Key tests validated:**
+- Path-based routing: `/users/*` → user-service, `/orders/*` → order-service
+- Gateway transparency (same response as direct call)
+- Unknown route handling (404)
+
+**Prerequisites:**
+1. LocalStack running: `docker-compose up -d localstack`
+2. Gateway created: `./infra/setup-gateway.sh`
+3. `api_id` variable configured in Bruno environment
+
+**Environment variables used:**
+- `api_id`: API Gateway ID (retrieved from setup-gateway.sh)
+- `gateway`: Full gateway URL (computed with api_id)
+
+</details>
+
+---
+
 ## Before Moving On
 
 Make sure you're ready for Step 5:
