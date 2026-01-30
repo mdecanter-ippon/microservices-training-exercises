@@ -1,7 +1,7 @@
 meta {
-  name: 0b. Get Bob Token
+  name: 1. Get Alice Token
   type: http
-  seq: 2
+  seq: 1
 }
 
 post {
@@ -12,14 +12,14 @@ post {
 
 body:form-urlencoded {
   client_id: dornach-web
-  username: bob
-  password: bob123
+  username: alice
+  password: alice123
   grant_type: password
 }
 
 script:post-response {
   if (res.getStatus() === 200) {
-    bru.setEnvVar("bob_token", res.getBody().access_token);
+    bru.setEnvVar("alice_token", res.getBody().access_token);
   }
 }
 
@@ -34,6 +34,6 @@ tests {
 }
 
 docs {
-  Get H2M token for Bob (admin role).
-  The token is saved to bob_token environment variable.
+  Get H2M token for Alice.
+  The token is saved to alice_token environment variable.
 }
