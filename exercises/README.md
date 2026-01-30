@@ -1,8 +1,16 @@
 # Training Exercises
 
-Congratulations on completing all 7 steps! This folder contains the bonus exercises.
+Welcome to the Dornach Microservices Training exercises!
+
+## Main Steps
+
+| Step | File | Topics |
+|------|------|--------|
+| Step 8 | [STEP_8_LAMBDA.md](STEP_8_LAMBDA.md) | Spring Cloud Function, AWS Lambda, API Gateway |
 
 ## Bonus Exercises
+
+Congratulations on completing all 8 steps! This folder contains additional bonus exercises.
 
 | Exercise | File | Topics |
 |----------|------|--------|
@@ -11,14 +19,28 @@ Congratulations on completing all 7 steps! This folder contains the bonus exerci
 
 ## Getting Started
 
-Choose any bonus exercise to continue learning. They can be done in any order.
+Follow the steps in order, or jump to any step using the checkpoint branches.
 
 ## If You Get Stuck
 
-Each bonus has a checkpoint branch:
+Each step and bonus has a checkpoint branch:
 
 ```bash
 # Save your work and switch to a checkpoint
+git stash && git checkout step-7-complete
+git stash && git checkout step-8-complete
 git stash && git checkout bonus-a-complete
 git stash && git checkout bonus-b-complete
 ```
+
+## Exercise Structure
+
+Each exercise follows a consistent pattern:
+1. **Recap** - What you learned in the previous step
+2. **Objectives** - What you'll learn in this step
+3. **Prerequisites** - What you need before starting
+4. **Context** - Why this topic matters
+5. **Exercises** - Hands-on coding with explanations
+6. **Troubleshooting** - Common issues and solutions
+7. **Validation Checklist** - Verify your work
+8. **Summary** - Key takeaways

@@ -1,0 +1,15 @@
+# Local development profile - run with: mvn spring-boot:run -Plocal
+server:
+  port: 8085
+
+spring:
+  main:
+    web-application-type: servlet  # Enable web for local testing
+
+user:
+  service:
+    url: http://localhost:8081
+
+logging:
+  level:
+    com.dornach: DEBUG

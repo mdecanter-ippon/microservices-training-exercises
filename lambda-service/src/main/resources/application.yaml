@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: lambda-service
+  main:
+    web-application-type: none  # No Tomcat needed in Lambda
+  cloud:
+    function:
+      definition: orderValidationFunction
+
+user:
+  service:
+    url: ${USER_SERVICE_URL:http://host.docker.internal:8081}
+
+# Logging
+logging:
+  level:
+    com.dornach: INFO

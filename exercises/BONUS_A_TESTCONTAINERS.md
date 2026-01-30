@@ -2,15 +2,16 @@
 
 ---
 
-## Recap: Step 7
+## Recap: Step 8
 
-In Step 7, you implemented **distributed tracing**:
-- **Zipkin** running as trace collector at `localhost:9411`
-- **Micrometer Tracing** with OpenTelemetry bridge
-- **Trace ID** shared across all services in a request
-- **Log correlation** with `[serviceName,traceId,spanId]` pattern
-- **Waterfall visualization** showing request flow across services
-- **Error tracing** to identify which service caused failures
+In Step 8, you deployed to **AWS Lambda**:
+- **Spring Cloud Function** for portable serverless functions
+- **Shaded JAR** with all dependencies bundled
+- **LocalStack Lambda** for local development
+- **API Gateway v2** as HTTP entry point
+- **Cold Start** challenge and solutions
+
+Now let's learn how to test our microservices with real containers.
 
 ---
 

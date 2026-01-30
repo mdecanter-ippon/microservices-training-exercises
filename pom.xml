@@ -23,6 +23,7 @@
         <module>user-service</module>
         <module>shipment-service</module>
         <module>order-service</module>
+        <module>lambda-service</module>
     </modules>
 
     <properties>
