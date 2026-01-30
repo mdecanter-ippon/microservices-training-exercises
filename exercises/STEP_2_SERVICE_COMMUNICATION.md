@@ -731,6 +731,42 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 2</strong></summary>
+
+### Order Service Requests
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Health Check | GET | `/actuator/health` | Verify order-service is UP |
+| 2 | List Orders | GET | `/orders` | List all orders (no auth) |
+| 3 | Create Order | POST | `/orders` | Create order - triggers call to user-service for validation |
+| 4 | Create Order - Invalid User | POST | `/orders` | Test with non-existent userId (404) |
+
+### Shipment Service Requests
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | Health Check | GET | `/actuator/health` | Verify shipment-service is UP |
+| 2 | List Shipments | GET | `/shipments` | List all shipments |
+
+**Key tests validated:**
+- Inter-service communication: order-service → user-service
+- User validation before order creation
+- Error handling when user doesn't exist (404 propagated)
+
+**Prerequisites:**
+1. user-service, order-service and shipment-service must be running
+2. A user must exist (created via Step 1) with ID in `user_id`
+
+**Environment variables used:**
+- `order_service_url`: Service URL (e.g., `http://localhost:8083`)
+- `user_id`: User ID for orders
+
+</details>
+
+---
+
 ## Before Moving On
 
 **Option A:** You completed all exercises
