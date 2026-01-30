@@ -428,6 +428,29 @@ In this step, you learned:
 
 ---
 
+<details>
+<summary><strong>Bruno Collection Reference - Step 3</strong></summary>
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | User Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec is available (version 3.x, paths present) |
+| 2 | Order Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for order service |
+| 3 | Shipment Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for shipment service |
+
+**Key tests validated:**
+- OpenAPI 3.x spec present on each service
+- Correct structure with `paths` section
+- `/users` endpoint documented in user-service
+
+**Swagger UI URLs to test manually:**
+- user-service: `http://localhost:8081/swagger-ui.html`
+- order-service: `http://localhost:8083/swagger-ui.html`
+- shipment-service: `http://localhost:8082/swagger-ui.html`
+
+</details>
+
+---
+
 ## Before Moving On
 
 **Option A:** You completed all exercises
