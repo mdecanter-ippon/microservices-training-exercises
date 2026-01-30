@@ -523,33 +523,6 @@ Run these requests:
 2. **Create Shipment (M2M token)** - Should return 201
 3. **Create Shipment (Alice token - should fail)** - Should return 403
 
----
-
-## Validation Checklist
-
-Before moving to Step 7, verify:
-
-- [ ] M2M client `order-service-client` exists in Keycloak
-- [ ] Can obtain M2M token with client credentials
-- [ ] M2M token contains `service-caller` role
-- [ ] `POST /shipments` with M2M token returns 201
-- [ ] `POST /shipments` with Alice's token returns 403
-- [ ] order-service automatically gets M2M token for shipment calls
-- [ ] Bruno "Step 6 - M2M Authentication" tests pass
-
----
-
-## Summary
-
-In this step, you learned:
-- **Client Credentials flow** is for service-to-service authentication
-- **Confidential clients** have a secret (unlike public clients)
-- **OAuth2AuthorizedClientManager** handles token lifecycle automatically
-- **OAuth2ClientHttpRequestInterceptor** adds tokens to requests
-- **RBAC with @PreAuthorize** controls access based on roles
-
----
-
 <details>
 <summary><strong>Bruno Collection Reference - Step 6</strong></summary>
 
@@ -584,6 +557,31 @@ In this step, you learned:
 | order-service-client | order-service-secret | service-caller |
 
 </details>
+
+---
+
+## Validation Checklist
+
+Before moving to Step 7, verify:
+
+- [ ] M2M client `order-service-client` exists in Keycloak
+- [ ] Can obtain M2M token with client credentials
+- [ ] M2M token contains `service-caller` role
+- [ ] `POST /shipments` with M2M token returns 201
+- [ ] `POST /shipments` with Alice's token returns 403
+- [ ] order-service automatically gets M2M token for shipment calls
+- [ ] Bruno "Step 6 - M2M Authentication" tests pass
+
+---
+
+## Summary
+
+In this step, you learned:
+- **Client Credentials flow** is for service-to-service authentication
+- **Confidential clients** have a secret (unlike public clients)
+- **OAuth2AuthorizedClientManager** handles token lifecycle automatically
+- **OAuth2ClientHttpRequestInterceptor** adds tokens to requests
+- **RBAC with @PreAuthorize** controls access based on roles
 
 ---
 
