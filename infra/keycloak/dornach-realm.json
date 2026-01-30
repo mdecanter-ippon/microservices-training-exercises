@@ -15,6 +15,10 @@
       {
         "name": "admin",
         "description": "Administrator role"
+      },
+      {
+        "name": "service-caller",
+        "description": "Role for service-to-service calls (M2M)"
       }
     ]
   },
@@ -37,6 +41,25 @@
         "http://localhost:*",
         "http://127.0.0.1:*"
       ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles"
+      ]
+    },
+    {
+      "clientId": "order-service-client",
+      "name": "Order Service M2M Client",
+      "description": "Confidential client for order-service to call other services (M2M)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "order-service-secret",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
       "defaultClientScopes": [
         "profile",
         "email",
