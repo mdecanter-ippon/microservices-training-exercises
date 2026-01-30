@@ -399,6 +399,27 @@ Apply the same OpenAPI annotations to:
 
 Add examples for each endpoint.
 
+<details>
+<summary><strong>Bruno Collection Reference</strong></summary>
+
+| # | Request | Method | URL | Description |
+|---|---------|--------|-----|-------------|
+| 1 | User Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec is available (version 3.x, paths present) |
+| 2 | Order Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for order service |
+| 3 | Shipment Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for shipment service |
+
+**Key tests validated:**
+- OpenAPI 3.x spec present on each service
+- Correct structure with `paths` section
+- `/users` endpoint documented in user-service
+
+**Swagger UI URLs to test manually:**
+- user-service: `http://localhost:8081/swagger-ui.html`
+- order-service: `http://localhost:8083/swagger-ui.html`
+- shipment-service: `http://localhost:8082/swagger-ui.html`
+
+</details>
+
 ---
 
 ## Validation Checklist
@@ -425,29 +446,6 @@ In this step, you learned:
 - **OpenAPI Generator** can create type-safe clients in any language
 
 > **Note:** Security annotations (@SecurityScheme, @SecurityRequirement) will be covered in Step 5 when you implement actual authentication.
-
----
-
-<details>
-<summary><strong>Bruno Collection Reference - Step 3</strong></summary>
-
-| # | Request | Method | URL | Description |
-|---|---------|--------|-----|-------------|
-| 1 | User Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec is available (version 3.x, paths present) |
-| 2 | Order Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for order service |
-| 3 | Shipment Service OpenAPI | GET | `/v3/api-docs` | Verify OpenAPI spec for shipment service |
-
-**Key tests validated:**
-- OpenAPI 3.x spec present on each service
-- Correct structure with `paths` section
-- `/users` endpoint documented in user-service
-
-**Swagger UI URLs to test manually:**
-- user-service: `http://localhost:8081/swagger-ui.html`
-- order-service: `http://localhost:8083/swagger-ui.html`
-- shipment-service: `http://localhost:8082/swagger-ui.html`
-
-</details>
 
 ---
 
