@@ -16,6 +16,7 @@ Congratulations on completing all 8 steps! This folder contains additional bonus
 |----------|------|--------|
 | Bonus A | [BONUS_A_TESTCONTAINERS.md](BONUS_A_TESTCONTAINERS.md) | PostgreSQL + Keycloak containers |
 | Bonus B | [BONUS_B_ASYNC_SQS.md](BONUS_B_ASYNC_SQS.md) | Spring Cloud AWS, DLQ |
+| Bonus C | [BONUS_C_MAPSTRUCT.md](BONUS_C_MAPSTRUCT.md) | MapStruct for DTO mapping |
 
 ## Getting Started
 
@@ -31,6 +32,7 @@ git stash && git checkout step-7-complete
 git stash && git checkout step-8-complete
 git stash && git checkout bonus-a-complete
 git stash && git checkout bonus-b-complete
+git stash && git checkout bonus-c-complete
 ```
 
 ## Exercise Structure
