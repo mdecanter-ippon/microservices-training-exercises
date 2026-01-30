@@ -94,6 +94,38 @@ fi
 echo "✓ Realm 'dornach' created successfully"
 echo ""
 
+# Assign service-caller role to order-service-client service account
+echo "🔧 Configuring M2M client..."
+
+# Get the order-service-client ID
+ORDER_CLIENT_ID=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+    "${KEYCLOAK_URL}/admin/realms/dornach/clients?clientId=order-service-client" | jq -r '.[0].id')
+
+if [ "$ORDER_CLIENT_ID" != "null" ] && [ -n "$ORDER_CLIENT_ID" ]; then
+    # Get the service account user for this client
+    SERVICE_ACCOUNT_ID=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+        "${KEYCLOAK_URL}/admin/realms/dornach/clients/${ORDER_CLIENT_ID}/service-account-user" | jq -r '.id')
+
+    if [ "$SERVICE_ACCOUNT_ID" != "null" ] && [ -n "$SERVICE_ACCOUNT_ID" ]; then
+        # Get the service-caller role
+        SERVICE_CALLER_ROLE=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+            "${KEYCLOAK_URL}/admin/realms/dornach/roles/service-caller")
+
+        # Assign the role to the service account
+        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/dornach/users/${SERVICE_ACCOUNT_ID}/role-mappings/realm" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "[${SERVICE_CALLER_ROLE}]" 2>/dev/null
+
+        echo "   ✓ M2M Client: order-service-client"
+        echo "   ✓ Service Account Role: service-caller"
+    fi
+else
+    echo "   ⚠️  M2M client not found (expected for Step 5)"
+fi
+
+echo ""
+
 # Verify realm configuration
 echo "✅ Verifying configuration..."
 
@@ -102,14 +134,14 @@ REALM_CHECK=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
     "${KEYCLOAK_URL}/admin/realms/dornach" | jq -r '.realm')
 echo "   ✓ Realm: $REALM_CHECK"
 
-# Check client
-CLIENT_CHECK=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
-    "${KEYCLOAK_URL}/admin/realms/dornach/clients" | jq -r '.[].clientId' | grep dornach-web)
-echo "   ✓ Client: $CLIENT_CHECK"
+# Check clients
+CLIENTS=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+    "${KEYCLOAK_URL}/admin/realms/dornach/clients" | jq -r '.[].clientId' | grep -E "dornach-web|order-service-client" | tr '\n' ', ' | sed 's/,$//')
+echo "   ✓ Clients: $CLIENTS"
 
 # Check roles
 ROLES=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
-    "${KEYCLOAK_URL}/admin/realms/dornach/roles" | jq -r '.[].name' | grep -E "user|admin" | tr '\n' ', ' | sed 's/,$//')
+    "${KEYCLOAK_URL}/admin/realms/dornach/roles" | jq -r '.[].name' | grep -E "user|admin|service-caller" | tr '\n' ', ' | sed 's/,$//')
 echo "   ✓ Roles: $ROLES"
 
 # Check users
@@ -122,11 +154,14 @@ echo "🎉 Keycloak setup completed successfully!"
 echo ""
 echo "📋 Configuration Summary:"
 echo "   - Realm: dornach"
-echo "   - Client: dornach-web (public)"
-echo "   - Roles: user, admin"
+echo "   - Clients:"
+echo "     • dornach-web (public, for H2M authentication)"
+echo "     • order-service-client (confidential, for M2M authentication)"
+echo "   - Roles: user, admin, service-caller"
 echo "   - Users:"
 echo "     • alice (password: alice123) - role: user"
 echo "     • bob (password: bob123) - roles: user, admin"
+echo "     • service-account-order-service-client - role: service-caller"
 echo ""
 echo "🔗 Access Keycloak:"
 echo "   - Admin Console: ${KEYCLOAK_URL}/admin"
