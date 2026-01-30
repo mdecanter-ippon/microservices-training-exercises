@@ -170,7 +170,20 @@ spring:
 
 ### 3.2 Add OAuth2 Client Manager Bean
 
-Add the following bean to `RestClientConfig.java`:
+First, add these imports to `RestClientConfig.java`:
+
+```java
+import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProvider;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+```
+
+Then add the following bean:
 
 ```java
 @Bean
@@ -196,7 +209,7 @@ public OAuth2AuthorizedClientManager authorizedClientManager(
 
 ### 3.3 Modify shipmentRestClient to Use OAuth2 Interceptor
 
-Modify the existing `shipmentRestClient` bean to inject the `OAuth2AuthorizedClientManager` and add the interceptor:
+Modify the existing `shipmentRestClient` bean to inject the `OAuth2AuthorizedClientManager` and add a custom interceptor that automatically obtains and attaches M2M tokens:
 
 ```java
 @Bean
@@ -204,17 +217,41 @@ public RestClient shipmentRestClient(
         RestClient.Builder builder,
         OAuth2AuthorizedClientManager authorizedClientManager) {
 
-    OAuth2ClientHttpRequestInterceptor interceptor =
-            new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
-    interceptor.setClientRegistrationId("shipment-service");
-
     return builder
             .baseUrl(shipmentServiceUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .requestInterceptor(interceptor)
+            .requestInterceptor((request, body, execution) -> {
+                OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
+                        .withClientRegistrationId("shipment-service")
+                        .principal("order-service")
+                        .build();
+
+                OAuth2AuthorizedClient authorizedClient =
+                        authorizedClientManager.authorize(authorizeRequest);
+
+                if (authorizedClient != null) {
+                    String token = authorizedClient.getAccessToken().getTokenValue();
+                    request.getHeaders().setBearerAuth(token);
+                }
+
+                return execution.execute(request, body);
+            })
             .build();
 }
 ```
+
+<details>
+<summary>💡 How the interceptor works</summary>
+
+The lambda interceptor:
+1. Creates an `OAuth2AuthorizeRequest` with the client registration ID "shipment-service"
+2. Uses the `OAuth2AuthorizedClientManager` to obtain or refresh the token
+3. Adds the token to the `Authorization: Bearer` header
+4. Executes the original request
+
+The manager handles token caching and automatic refresh when the token expires.
+
+</details>
 
 The interceptor automatically:
 1. Gets a token from Keycloak (if not cached)
