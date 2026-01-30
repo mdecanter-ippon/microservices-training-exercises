@@ -67,8 +67,14 @@ docker-compose up -d localstack
 
 ### 1.2 Run SQS Setup Script
 
+**Linux/macOS/Git Bash:**
 ```bash
 ./infra/setup-sqs.sh
+```
+
+**Windows PowerShell:**
+```powershell
+.\infra\windows\setup-sqs.ps1
 ```
 
 This creates:
