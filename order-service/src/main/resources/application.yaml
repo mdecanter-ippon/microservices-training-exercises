@@ -27,7 +27,7 @@ spring:
           shipment-service:
             provider: keycloak
             client-id: order-service-client
-            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:secret}
+            client-secret: ${ORDER_SERVICE_CLIENT_SECRET:order-service-secret}
             authorization-grant-type: client_credentials
             scope: openid
         provider:
