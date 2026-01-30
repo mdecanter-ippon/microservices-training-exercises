@@ -448,32 +448,6 @@ Run "Create Order (triggers SQS)" and verify:
 1. Order is created (201)
 2. notification-service logs show the event processed
 
----
-
-## Validation Checklist
-
-Before completing the training, verify:
-
-- [ ] SQS queues created (order-events + order-events-dlq)
-- [ ] order-service publishes events to SQS
-- [ ] notification-service receives and processes events
-- [ ] Logs show async message processing
-- [ ] DLQ receives failed messages after 3 retries
-- [ ] (Optional) Trace ID propagated through SQS
-
----
-
-## Summary
-
-In this exercise, you learned:
-- **SQS** provides reliable asynchronous messaging
-- **Fire and forget** pattern decouples services
-- **@SqsListener** auto-configures message consumers
-- **Dead Letter Queue** handles poison messages
-- **LocalStack** emulates AWS services locally
-
----
-
 <details>
 <summary><strong>Bruno Collection Reference - Bonus B</strong></summary>
 
@@ -529,6 +503,30 @@ awslocal sqs receive-message \
 ```
 
 </details>
+
+---
+
+## Validation Checklist
+
+Before completing the training, verify:
+
+- [ ] SQS queues created (order-events + order-events-dlq)
+- [ ] order-service publishes events to SQS
+- [ ] notification-service receives and processes events
+- [ ] Logs show async message processing
+- [ ] DLQ receives failed messages after 3 retries
+- [ ] (Optional) Trace ID propagated through SQS
+
+---
+
+## Summary
+
+In this exercise, you learned:
+- **SQS** provides reliable asynchronous messaging
+- **Fire and forget** pattern decouples services
+- **@SqsListener** auto-configures message consumers
+- **Dead Letter Queue** handles poison messages
+- **LocalStack** emulates AWS services locally
 
 ---
 
