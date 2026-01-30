@@ -8,7 +8,7 @@ In Step 4, you configured an **API Gateway** with LocalStack:
 - **HTTP API v2** created with `awslocal` CLI
 - **Path-based routing** to user-service, order-service, and shipment-service
 - **Single entry point** at `localhost:4566` instead of multiple ports
-- **`setup-gateway.sh`** script for reproducible infrastructure
+- **`setup-gateway.sh`** (or `windows/setup-gateway.ps1`) script for reproducible infrastructure
 
 ---
 
@@ -188,9 +188,16 @@ curl -sf http://localhost:8080/realms/master && echo "Keycloak is ready!"
 
 ### 1.2 Run the Setup Script
 
+**Linux/macOS/Git Bash:**
 ```bash
 cd infra
 ./setup-keycloak.sh
+```
+
+**Windows PowerShell:**
+```powershell
+cd infra\windows
+.\setup-keycloak.ps1
 ```
 
 This script creates:
