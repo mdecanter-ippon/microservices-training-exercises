@@ -1,10 +1,15 @@
 # Bonus B: Asynchronous Communication with SQS
 
-> **⚠️ Before starting:** Make sure you have completed Bonus A (or Step 7 minimum).
-> If you need to catch up:
-> ```bash
-> git stash && git checkout bonus-a-complete
-> ```
+---
+
+## Recap: Bonus A
+
+In Bonus A, you learned **integration testing** with Testcontainers:
+- Real PostgreSQL and Keycloak containers for tests
+- `@ServiceConnection` for auto-configuration
+- Real JWT validation instead of mocks
+
+Now let's add **asynchronous communication** to decouple our services.
 
 ---
 
@@ -21,10 +26,70 @@ By the end of this exercise, you will:
 
 ## Prerequisites
 
-- Bonus A completed (or Step 7)
+### 1. Starting Point
+
+- Bonus A completed (or Step 7 minimum)
+- **Docker Desktop** running
 - **Bruno** installed (https://www.usebruno.com/downloads)
-- LocalStack running
-- Basic understanding of message queues
+
+If you need to catch up:
+```bash
+git stash && git checkout bonus-a-complete
+```
+
+### 2. Setup SQS Queues
+
+Start LocalStack and create the queues:
+
+```bash
+# Start LocalStack
+docker-compose up -d localstack
+
+# Create SQS queues
+# Linux/macOS/Git Bash:
+./infra/setup-sqs.sh
+
+# Windows PowerShell:
+# .\infra\windows\setup-sqs.ps1
+```
+
+Verify the queues exist:
+```bash
+awslocal sqs list-queues
+```
+
+**Expected output:**
+```json
+{
+    "QueueUrls": [
+        "http://localhost:4566/000000000000/order-events",
+        "http://localhost:4566/000000000000/order-events-dlq"
+    ]
+}
+```
+
+### 3. Add Spring Cloud AWS Dependencies
+
+**File:** Parent `pom.xml` - Add BOM in `<dependencyManagement>`:
+
+```xml
+<dependency>
+    <groupId>io.awspring.cloud</groupId>
+    <artifactId>spring-cloud-aws-dependencies</artifactId>
+    <version>3.2.0</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
+
+**File:** `order-service/pom.xml` - Add SQS dependency:
+
+```xml
+<dependency>
+    <groupId>io.awspring.cloud</groupId>
+    <artifactId>spring-cloud-aws-starter-sqs</artifactId>
+</dependency>
+```
 
 ---
 
@@ -51,81 +116,25 @@ POST /orders (sync)
 ```
 
 **Benefits:**
-- Order response is fast (doesn't wait for notification)
-- If notification-service is down, messages queue up
-- Automatic retries with Dead Letter Queue
+
+| Aspect | Synchronous | Asynchronous |
+|--------|-------------|--------------|
+| Response time | Slow (waits for all) | Fast |
+| Coupling | Strong | Weak |
+| Resilience | If notif down → error | Messages queue up |
+| Retry | Manual | Automatic (DLQ) |
 
 ---
 
-## Exercise 1: Setup SQS Queues
+## Exercise 1: Configure order-service as Event Publisher
 
-### 1.1 Start LocalStack
+In this exercise, you'll configure order-service to publish events to SQS when an order is created.
 
-```bash
-docker-compose up -d localstack
-```
-
-### 1.2 Run SQS Setup Script
-
-```bash
-./infra/setup-sqs.sh
-```
-
-This creates:
-- `order-events` - Main queue for order events
-- `order-events-dlq` - Dead Letter Queue for failed messages
-
-### 1.3 Verify Queues
-
-```bash
-# List queues
-awslocal sqs list-queues
-
-# Should show:
-# order-events
-# order-events-dlq
-```
-
----
-
-## Exercise 2: Add Spring Cloud AWS Dependencies
-
-**File:** Parent `pom.xml`
-
-### 2.1 Add BOM
-
-```xml
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>io.awspring.cloud</groupId>
-            <artifactId>spring-cloud-aws-dependencies</artifactId>
-            <version>3.2.0</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
-```
-
-### 2.2 Add SQS Dependency to order-service
-
-**File:** `order-service/pom.xml`
-
-```xml
-<dependency>
-    <groupId>io.awspring.cloud</groupId>
-    <artifactId>spring-cloud-aws-starter-sqs</artifactId>
-</dependency>
-```
-
----
-
-## Exercise 3: Configure order-service as Publisher
+### 1.1 Add AWS Configuration
 
 **File:** `order-service/src/main/resources/application.yaml`
 
-### 3.1 Add AWS Configuration
+Add this configuration:
 
 ```yaml
 spring:
@@ -144,11 +153,17 @@ app:
     order-events-queue: order-events
 ```
 
-### 3.2 Create Event DTO
+### 1.2 Create the Event DTO
 
 **File:** `order-service/src/main/java/com/dornach/order/event/OrderCreatedEvent.java`
 
 ```java
+package com.dornach.order.event;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
 public record OrderCreatedEvent(
     UUID orderId,
     UUID userId,
@@ -161,11 +176,19 @@ public record OrderCreatedEvent(
 ) {}
 ```
 
-### 3.3 Create Event Publisher
+### 1.3 Create the Event Publisher
 
 **File:** `order-service/src/main/java/com/dornach/order/event/OrderEventPublisher.java`
 
 ```java
+package com.dornach.order.event;
+
+import com.dornach.order.domain.Order;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 @Component
 @Slf4j
 public class OrderEventPublisher {
@@ -198,11 +221,11 @@ public class OrderEventPublisher {
 }
 ```
 
-### 3.4 Publish Event in OrderService
+### 1.4 Integrate Publisher into OrderService
 
 **File:** `order-service/src/main/java/com/dornach/order/service/OrderService.java`
 
-Add the publisher call after order creation:
+Add the publisher as a dependency and call it after saving the order:
 
 ```java
 @Service
@@ -213,6 +236,8 @@ public class OrderService {
     private final UserClient userClient;
     private final ShipmentClient shipmentClient;
     private final OrderEventPublisher eventPublisher;  // Add this
+
+    // Update constructor to include eventPublisher
 
     public Order createOrder(CreateOrderRequest request) {
         // ... existing validation and order creation ...
@@ -227,16 +252,28 @@ public class OrderService {
 }
 ```
 
+<details>
+<summary>💡 Key concept: Fire and Forget</summary>
+
+`sqsTemplate.send()` is non-blocking. The message is sent to SQS and the method returns immediately. The order API response doesn't wait for notification-service to process the message.
+
+This is the "fire and forget" pattern - we trust SQS to deliver the message reliably.
+
+</details>
+
 ---
 
-## Exercise 4: Create notification-service
+## Exercise 2: Create notification-service
 
-### 4.1 Create Module Structure
+In this exercise, you'll create a new microservice that consumes order events from SQS.
+
+### 2.1 Create Module Structure
+
+Create the following directory structure:
 
 ```
 notification-service/
 ├── pom.xml
-├── Dockerfile
 └── src/main/
     ├── java/com/dornach/notification/
     │   ├── NotificationServiceApplication.java
@@ -246,10 +283,18 @@ notification-service/
         └── application.yaml
 ```
 
-### 4.2 Create pom.xml
+### 2.2 Create pom.xml
+
+**File:** `notification-service/pom.xml`
 
 ```xml
-<project>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>com.dornach</groupId>
         <artifactId>microservices-training</artifactId>
@@ -271,9 +316,16 @@ notification-service/
 </project>
 ```
 
-### 4.3 Create Application Class
+### 2.3 Create Application Class
+
+**File:** `notification-service/src/main/java/com/dornach/notification/NotificationServiceApplication.java`
 
 ```java
+package com.dornach.notification;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 @SpringBootApplication
 public class NotificationServiceApplication {
     public static void main(String[] args) {
@@ -282,7 +334,9 @@ public class NotificationServiceApplication {
 }
 ```
 
-### 4.4 Create application.yaml
+### 2.4 Create application.yaml
+
+**File:** `notification-service/src/main/resources/application.yaml`
 
 ```yaml
 server:
@@ -302,11 +356,41 @@ spring:
         endpoint: http://localhost:4566
 ```
 
-### 4.5 Create Event Listener
+### 2.5 Create Event DTO
+
+**File:** `notification-service/src/main/java/com/dornach/notification/dto/OrderCreatedEvent.java`
+
+```java
+package com.dornach.notification.dto;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record OrderCreatedEvent(
+    UUID orderId,
+    UUID userId,
+    String productName,
+    int quantity,
+    BigDecimal totalPrice,
+    String shippingAddress,
+    String trackingNumber,
+    Instant createdAt
+) {}
+```
+
+### 2.6 Create Event Listener
 
 **File:** `notification-service/src/main/java/com/dornach/notification/listener/OrderEventListener.java`
 
 ```java
+package com.dornach.notification.listener;
+
+import com.dornach.notification.dto.OrderCreatedEvent;
+import io.awspring.cloud.sqs.annotation.SqsListener;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
 @Component
 @Slf4j
 public class OrderEventListener {
@@ -335,21 +419,19 @@ public class OrderEventListener {
 }
 ```
 
----
+### 2.7 Test the Flow
 
-## Exercise 5: Test the Flow
-
-### 5.1 Start Services
+**Start the services:**
 
 ```bash
 # Terminal 1: notification-service
 cd notification-service && mvn spring-boot:run
 
-# Terminal 2: order-service (and dependencies)
+# Terminal 2: order-service (with other services running)
 cd order-service && mvn spring-boot:run
 ```
 
-### 5.2 Create an Order
+**Create an order:**
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/realms/dornach/protocol/openid-connect/token \
@@ -370,24 +452,38 @@ curl -X POST http://localhost:8083/orders \
   }'
 ```
 
-### 5.3 Check notification-service Logs
+**Expected output in notification-service logs:**
+```
+Received order event: abc-123...
+Product: Laptop x1
+Calling legacy notification system...
+Notification sent for order: abc-123...
+Order event processed successfully!
+```
 
-You should see:
-```
-[notification-service] Received order event: abc-123...
-[notification-service] Product: Laptop x1
-[notification-service] Calling legacy notification system...
-[notification-service] Notification sent for order: abc-123...
-[notification-service] Order event processed successfully!
-```
+<details>
+<summary>💡 Understanding @SqsListener</summary>
+
+| Feature | Description |
+|---------|-------------|
+| Auto-configuration | Sets up the SQS consumer automatically |
+| Deserialization | JSON → Java object (uses Jackson) |
+| Acknowledgement | Automatic ACK if no exception thrown |
+| Retry | Automatic retry on exception |
+
+</details>
 
 ---
 
-## Exercise 6: Test Dead Letter Queue
+## Exercise 3: Test Dead Letter Queue
 
-### 6.1 Make the Consumer Fail
+In this exercise, you'll understand how failed messages are handled by the Dead Letter Queue.
+
+### 3.1 Make the Consumer Fail
 
 Temporarily modify `OrderEventListener` to throw an exception:
+
+**File:** `notification-service/src/main/java/com/dornach/notification/listener/OrderEventListener.java`
 
 ```java
 @SqsListener("order-events")
@@ -397,13 +493,23 @@ public void handleOrderCreatedEvent(OrderCreatedEvent event) {
 }
 ```
 
-### 6.2 Send a Message
+### 3.2 Send a Message and Observe Retries
 
 Create another order (same curl command as before).
 
-### 6.3 Check DLQ
+In notification-service logs, you'll see **3 processing attempts**:
+```
+Received order event: xyz-456...
+ERROR: Simulated failure!
+Received order event: xyz-456...
+ERROR: Simulated failure!
+Received order event: xyz-456...
+ERROR: Simulated failure!
+```
 
-After 3 retries (configurable), the message goes to DLQ:
+### 3.3 Check the Dead Letter Queue
+
+After 3 retries, the message goes to the DLQ:
 
 ```bash
 awslocal sqs receive-message \
@@ -411,11 +517,36 @@ awslocal sqs receive-message \
   --max-number-of-messages 10
 ```
 
-You should see the failed message in the DLQ.
+You should see the failed message with order details in JSON format.
 
-### 6.4 Revert the Change
+### 3.4 Restore Normal Behavior
 
-Remove the `throw` statement and restart notification-service.
+Remove the `throw` statement and restart notification-service:
+
+```java
+@SqsListener("order-events")
+public void handleOrderCreatedEvent(OrderCreatedEvent event) {
+    log.info("Received order event: {}", event.orderId());
+    log.info("Product: {} x{}", event.productName(), event.quantity());
+    simulateLegacyNotificationCall(event);
+    log.info("Order event processed successfully!");
+}
+```
+
+<details>
+<summary>💡 Why Dead Letter Queues matter</summary>
+
+Without a DLQ:
+- Poison messages (that always fail) block the queue forever
+- You lose visibility into failures
+- No way to analyze or reprocess failed messages
+
+With a DLQ:
+- Failed messages are moved aside after N retries
+- Main queue continues processing new messages
+- Operations team can investigate and reprocess DLQ messages
+
+</details>
 
 ---
 
@@ -428,72 +559,73 @@ Check if the trace ID is propagated through SQS:
 3. Find the trace
 4. Verify it shows: `order-service → SQS → notification-service`
 
----
-
-## Validation with Bruno
-
-### Run Bonus B Tests
-
-1. Open Bruno
-2. Select the **Direct** environment
-3. Navigate to **Bonus B - Async SQS**
-
-Run "Create Order (triggers SQS)" and verify:
-1. Order is created (201)
-2. notification-service logs show the event processed
+**Hint:** You may need to add tracing dependencies to notification-service.
 
 ---
 
 ## Validation Checklist
 
-Before completing the training, verify:
+Before moving on, verify:
 
 - [ ] SQS queues created (order-events + order-events-dlq)
-- [ ] order-service publishes events to SQS
+- [ ] order-service publishes events on order creation
 - [ ] notification-service receives and processes events
-- [ ] Logs show async message processing
+- [ ] Logs show asynchronous processing (order returns before notification completes)
 - [ ] DLQ receives failed messages after 3 retries
-- [ ] (Optional) Trace ID propagated through SQS
+
+---
+
+## Troubleshooting
+
+### "Queue does not exist"
+
+```bash
+# Verify LocalStack is running
+docker ps | grep localstack
+
+# Recreate queues
+./infra/setup-sqs.sh
+```
+
+### "Connection refused to localhost:4566"
+
+LocalStack is not started:
+```bash
+docker-compose up -d localstack
+```
+
+### Messages not received by notification-service
+
+1. Check queue name matches in `@SqsListener("order-events")`
+2. Verify AWS config is identical in both services
+3. Ensure notification-service started successfully
 
 ---
 
 ## Summary
 
 In this exercise, you learned:
-- **SQS** provides reliable asynchronous messaging
-- **Fire and forget** pattern decouples services
-- **@SqsListener** auto-configures message consumers
-- **Dead Letter Queue** handles poison messages
-- **LocalStack** emulates AWS services locally
+
+| Concept | What You Did |
+|---------|--------------|
+| **SQS** | Used reliable message queue for async communication |
+| **Fire and forget** | Published events without waiting for response |
+| **@SqsListener** | Consumed messages with auto-configuration |
+| **Dead Letter Queue** | Handled failed messages gracefully |
+| **LocalStack** | Emulated AWS SQS locally |
 
 ---
 
-## Congratulations!
-
-You have completed the Microservices Training! You now have hands-on experience with:
-
-| Step | Topic |
-|------|-------|
-| 1 | REST APIs with Java 21 |
-| 2 | Service Communication |
-| 3 | Contract-First with OpenAPI |
-| 4 | API Gateway |
-| 5 | H2M Authentication |
-| 6 | M2M Authentication |
-| 7 | Distributed Tracing |
-| Bonus A | Testcontainers |
-| Bonus B | Async SQS |
-
----
-
-## Before Finishing
+## Before Moving On
 
 **Option A:** You completed all exercises
 ```bash
-git add . && git commit -m "Complete Bonus B - Training Complete!"
+git add . && git commit -m "Complete Bonus B"
 ```
 
-**Option B:** You want to see the final solution
+**Option B:** You need to catch up
 ```bash
 git stash && git checkout bonus-b-complete
 ```
+
+**Next:** [Bonus C - MapStruct](./BONUS_C_MAPSTRUCT.md)
