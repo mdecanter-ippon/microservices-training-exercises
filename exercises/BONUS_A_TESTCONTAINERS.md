@@ -28,7 +28,6 @@ By the end of this exercise, you will:
 
 - Step 7 completed
 - **Docker Desktop** running (or Colima/Podman)
-- **Bruno** installed (https://www.usebruno.com/downloads)
 - Basic understanding of JUnit 5
 
 ---
@@ -49,11 +48,15 @@ Unit tests with mocks are fast but can hide bugs. Real integration tests catch i
 
 ---
 
-## Exercise 1: Add Testcontainers Dependencies
+## Exercise 1: Setup Testcontainers with PostgreSQL
+
+In this exercise, you'll configure Testcontainers and create a test class with a PostgreSQL container.
+
+### 1.1 Add Dependencies to user-service
 
 **File:** `user-service/pom.xml`
 
-### 1.1 Add Dependencies
+Add the following dependencies in the `<dependencies>` section:
 
 ```xml
 <!-- Testcontainers Core -->
@@ -77,7 +80,7 @@ Unit tests with mocks are fast but can hide bugs. Real integration tests catch i
     <scope>test</scope>
 </dependency>
 
-<!-- Keycloak Container -->
+<!-- Keycloak Container (for Exercise 2) -->
 <dependency>
     <groupId>com.github.dasniko</groupId>
     <artifactId>testcontainers-keycloak</artifactId>
@@ -86,15 +89,32 @@ Unit tests with mocks are fast but can hide bugs. Real integration tests catch i
 </dependency>
 ```
 
----
-
-## Exercise 2: Create Integration Test Class
+### 1.2 Create the Integration Test Class
 
 **File:** `user-service/src/test/java/com/dornach/user/UserServiceContainerTest.java`
 
-### 2.1 Create the Test Class
+Create the test class with proper annotations and a PostgreSQL container:
 
 ```java
+package com.dornach.user;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("docker")
@@ -107,73 +127,94 @@ class UserServiceContainerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // TODO: Add containers in next step
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("userdb")
+            .withUsername("test")
+            .withPassword("test");
+
+    @Test
+    @DisplayName("GET /actuator/health should be public")
+    void healthEndpoint_ShouldBePublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
 }
 ```
 
-<details>
-<summary>💡 Explanation</summary>
+### 1.3 Run Your First Container Test
 
-- `@SpringBootTest` - Loads the full application context
-- `@AutoConfigureMockMvc` - Sets up MockMvc for HTTP testing
-- `@ActiveProfiles("docker")` - Uses the docker profile (JWT security enabled)
-- `@Testcontainers` - Manages container lifecycle
-- `disabledWithoutDocker = true` - Skips tests if Docker unavailable
-
-</details>
-
----
-
-## Exercise 3: Add PostgreSQL Container
-
-### 3.1 Add Container Definition
-
-```java
-@Container
-@ServiceConnection
-static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-        .withDatabaseName("userdb")
-        .withUsername("test")
-        .withPassword("test");
+```bash
+cd user-service
+mvn test -Dtest=UserServiceContainerTest
 ```
 
-**Question:** What does `@ServiceConnection` do?
+**First run:** Will download Docker images (may take a few minutes).
+
+**Expected output:**
+```
+INFO  Creating container for image: postgres:16-alpine
+INFO  Container started in PT0.886817S
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+```
 
 <details>
-<summary>💡 Answer</summary>
+<summary>💡 Understanding the annotations</summary>
 
-`@ServiceConnection` is Spring Boot 3.1+ magic. It automatically configures:
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
-
-You don't need `@DynamicPropertySource` for the datasource!
+| Annotation | Purpose |
+|------------|---------|
+| `@SpringBootTest` | Loads the full application context |
+| `@AutoConfigureMockMvc` | Sets up MockMvc for HTTP testing |
+| `@ActiveProfiles("docker")` | Uses the docker profile (JWT security enabled) |
+| `@Testcontainers` | Manages container lifecycle |
+| `@Container` | Marks a container to be managed by JUnit |
+| `@ServiceConnection` | **Spring Boot 3.1+ magic** - Auto-configures `spring.datasource.*` |
 
 </details>
 
 ---
 
-## Exercise 4: Add Keycloak Container
+## Exercise 2: Add Keycloak Container for JWT Testing
 
-### 4.1 Copy Realm Configuration
+Now let's add Keycloak to test real JWT authentication.
 
-Copy the realm configuration for tests:
+### 2.1 Copy Realm Configuration
+
+The test needs the same Keycloak realm as our development environment:
+
 ```bash
 cp infra/keycloak/dornach-realm.json user-service/src/test/resources/
 ```
 
-### 4.2 Add Keycloak Container
+### 2.2 Add Keycloak Container and Dynamic Properties
 
+Update your test class to add the Keycloak container and configure Spring Security dynamically.
+
+**Add these imports:**
+```java
+import dasniko.testcontainers.keycloak.KeycloakContainer;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+```
+
+**Add the Keycloak container after the PostgreSQL container:**
 ```java
 @Container
 static KeycloakContainer keycloak = new KeycloakContainer("quay.io/keycloak/keycloak:26.0")
         .withRealmImportFile("dornach-realm.json");
 ```
 
-### 4.3 Configure Dynamic Properties
-
-Keycloak doesn't have `@ServiceConnection`, so we need `@DynamicPropertySource`:
-
+**Add dynamic property configuration:**
 ```java
 @DynamicPropertySource
 static void configureProperties(DynamicPropertyRegistry registry) {
@@ -187,11 +228,18 @@ static void configureProperties(DynamicPropertyRegistry registry) {
 }
 ```
 
----
+<details>
+<summary>💡 Why @DynamicPropertySource for Keycloak?</summary>
 
-## Exercise 5: Create Token Helper Method
+Unlike PostgreSQL, Keycloak doesn't have a `@ServiceConnection` integration in Spring Boot.
 
-### 5.1 Add Token Retrieval Method
+We need `@DynamicPropertySource` to inject the dynamic Keycloak URL (with random port) into Spring Security configuration.
+
+</details>
+
+### 2.3 Add Token Helper Method
+
+Add this helper method to obtain JWT tokens from Keycloak:
 
 ```java
 private String getAccessToken(String username, String password) throws Exception {
@@ -216,11 +264,31 @@ private String getAccessToken(String username, String password) throws Exception
 }
 ```
 
+### 2.4 Verify Keycloak Starts
+
+Run the tests again to ensure Keycloak starts properly:
+
+```bash
+mvn test -Dtest=UserServiceContainerTest
+```
+
+**Expected output:**
+```
+INFO  Creating container for image: quay.io/keycloak/keycloak:26.0
+INFO  Container started in PT15.817453S
+INFO  Creating container for image: postgres:16-alpine
+INFO  Container started in PT0.886817S
+```
+
 ---
 
-## Exercise 6: Write Integration Tests
+## Exercise 3: Write Integration Tests
 
-### 6.1 Test: Request Without Token Returns 401
+Now write tests that verify real JWT authentication against the Keycloak container.
+
+### 3.1 Test: Request Without Token Returns 401
+
+Add this test to verify unauthenticated requests are rejected:
 
 ```java
 @Test
@@ -231,7 +299,9 @@ void getUsersWithoutToken_ShouldReturn401() throws Exception {
 }
 ```
 
-### 6.2 Test: Request With Valid Token Returns 200
+### 3.2 Test: Request With Valid Token Returns 200
+
+Add this test to verify authenticated requests succeed:
 
 ```java
 @Test
@@ -245,7 +315,9 @@ void getUsersWithValidToken_ShouldReturn200() throws Exception {
 }
 ```
 
-### 6.3 Test: Create User With Admin Token
+### 3.3 Test: Create User With Admin Token
+
+Add this test to verify admin operations work:
 
 ```java
 @Test
@@ -271,40 +343,14 @@ void createUserWithAdminToken_ShouldReturn201() throws Exception {
 }
 ```
 
-### 6.4 Test: Health Endpoint Is Public
-
-```java
-@Test
-@DisplayName("GET /actuator/health should be public")
-void healthEndpoint_ShouldBePublic() throws Exception {
-    mockMvc.perform(get("/actuator/health"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("UP"));
-}
-```
-
----
-
-## Exercise 7: Run the Tests
-
-### 7.1 Run with Maven
+### 3.4 Run All Tests
 
 ```bash
-cd user-service
 mvn test -Dtest=UserServiceContainerTest
 ```
 
-**First run:** Will download Docker images (may take a few minutes).
-
-### 7.2 Expected Output
-
+**Expected output:**
 ```
-[INFO] Running com.dornach.user.UserServiceContainerTest
-INFO  Creating container for image: quay.io/keycloak/keycloak:26.0
-INFO  Container started in PT15.817453S
-INFO  Creating container for image: postgres:16-alpine
-INFO  Container started in PT0.886817S
-
 [INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
@@ -313,27 +359,14 @@ INFO  Container started in PT0.886817S
 
 ## Challenge: Test M2M Authentication (Optional)
 
-Write a test that:
-1. Gets an M2M token using client credentials
-2. Calls a protected endpoint
-3. Verifies the response
+Write a test that uses **client credentials** (M2M) instead of user credentials.
 
-<details>
-<summary>💡 Hint</summary>
-
+**Hint:** Create a helper method similar to `getAccessToken` but with:
 ```java
-private String getM2MToken() throws Exception {
-    String tokenUrl = keycloak.getAuthServerUrl() + "/realms/dornach/protocol/openid-connect/token";
-
-    String requestBody = "client_id=order-service-client" +
-            "&client_secret=order-service-secret" +
-            "&grant_type=client_credentials";
-
-    // ... similar to getAccessToken()
-}
+String requestBody = "client_id=order-service-client" +
+        "&client_secret=order-service-secret" +
+        "&grant_type=client_credentials";
 ```
-
-</details>
 
 ---
 
@@ -366,8 +399,8 @@ To reuse containers between runs:
 Before moving to Bonus B, verify:
 
 - [ ] Dependencies added to pom.xml
-- [ ] Test class created with proper annotations
-- [ ] PostgreSQL container starts with `@ServiceConnection`
+- [ ] Test class created with `@Testcontainers` and `@ServiceConnection`
+- [ ] PostgreSQL container starts successfully
 - [ ] Keycloak container starts with realm imported
 - [ ] Token retrieval helper works
 - [ ] All 4 tests pass
@@ -378,11 +411,14 @@ Before moving to Bonus B, verify:
 ## Summary
 
 In this exercise, you learned:
-- **Testcontainers** runs real Docker containers for tests
-- **@ServiceConnection** auto-configures Spring Boot datasources
-- **@DynamicPropertySource** injects dynamic properties
-- **Real JWT validation** catches auth bugs that mocks miss
-- **Containers are ephemeral** - clean state for each test run
+
+| Concept | What You Did |
+|---------|--------------|
+| **Testcontainers** | Ran real Docker containers for tests |
+| **@ServiceConnection** | Auto-configured PostgreSQL datasource |
+| **@DynamicPropertySource** | Injected Keycloak URL dynamically |
+| **Real JWT validation** | Tested auth with real Keycloak tokens |
+| **Ephemeral containers** | Each test run = clean state |
 
 ---
 
